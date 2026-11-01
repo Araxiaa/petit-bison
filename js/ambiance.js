@@ -1,4 +1,4 @@
-// Effets : brume + lucioles vertes (ses yeux), lueur du curseur, inclinaison des cartes, révélations au scroll, mascotte pixel-art.
+// Ambiance : brume + lucioles vertes (ses yeux), roseaux, barre de lecture, lueur du curseur, inclinaison des cartes, révélations au scroll, mascotte pixel-art.
 (function () {
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const root = document.documentElement;
@@ -156,6 +156,31 @@
   }
   mEl.addEventListener("pointerenter", () => { if (mState === "sit") pose(mCfg.regard, false); });
   mEl.addEventListener("pointerleave", () => { if (mState === "sit") pose(mCfg.assis, false); });
+
+  /* ---- roseaux du pied de page ---- */
+  const reeds = document.getElementById("reeds");
+  if (reeds) {
+    let g = "";
+    for (let i = 0; i < 34; i++) {
+      const x = 12 + (i / 33) * 1176 + rnd(-14, 14), h = rnd(70, 150), bend = rnd(-22, 22), head = Math.random() < 0.45;
+      g += `<g class="reed" style="--d:${rnd(0, 6).toFixed(2)}s;--s:${rnd(5, 9).toFixed(1)}s;--a:${rnd(1.2, 3).toFixed(1)}deg"><path d="M${x} 170 Q${x + bend * 0.2} ${170 - h * 0.6} ${x + bend} ${170 - h}" fill="none" stroke-width="${rnd(2.2, 3.6).toFixed(1)}" stroke-linecap="round"/>${head ? `<ellipse cx="${x + bend}" cy="${170 - h - 16}" rx="5" ry="${rnd(12, 17).toFixed(1)}" class="head"/>` : `<path d="M${x + bend} ${170 - h} q${rnd(6, 16)} -22 ${rnd(14, 28)} -26" fill="none" stroke-width="2" stroke-linecap="round"/>`}</g>`;
+    }
+    reeds.innerHTML = g;
+  }
+
+  /* ---- barre de lecture + bouton « remonter » ---- */
+  const bar = document.getElementById("progress"), up = document.getElementById("up");
+  let rt = false;
+  addEventListener("scroll", () => {
+    if (rt) return; rt = true;
+    requestAnimationFrame(() => {
+      rt = false;
+      const max = document.documentElement.scrollHeight - innerHeight;
+      if (bar) bar.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`;
+      if (up) up.classList.toggle("on", scrollY > 700);
+    });
+  }, { passive: true });
+  if (up) up.addEventListener("click", () => scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" }));
 
   window.FX = {
     observe(scope = document) {

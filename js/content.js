@@ -117,18 +117,11 @@ window.DEFAULT_CONTENT = {
     cicatrices: [],
   },
 
-  lignee: {
-    famille: [
-      { titre: "Mère", texte: "Pensée de Libellule [ PNJ - Vivante ]" },
-      { titre: "Baba", texte: "Langue d'Ortie [ PNJ - Vivant ]" },
-      { titre: "Frère", texte: "Petit Sanglier [ PNJ - Vivant ]" },
-    ],
-    autres: [
-      { titre: "Conjoint·e", texte: "Jamais de sa vie." },
-      { titre: "Descendance", texte: "Jamais de sa vie." },
-      { titre: "Mentorat", texte: "À voir dans une lune." },
-    ],
-  },
+  famille_infos: [
+    { titre: "Conjoint·e", texte: "Jamais de sa vie." },
+    { titre: "Descendance", texte: "Jamais de sa vie." },
+    { titre: "Mentorat", texte: "À voir dans une lune." },
+  ],
 
   histoire: [
     "0 lune — Naissance.",
@@ -156,22 +149,26 @@ window.DEFAULT_CONTENT = {
     },
   },
 
-  relations: [
-    { nom: "Pensée de Libellule", lien: "Mère", clan: "Clan de l'Ombre", rang: "", type: "PNJ", joueur: "", image: "",
+  // Famille et relations ont la même forme : photo, vivant ou non, PJ ou PNJ, clan / groupe, avis datés (phases).
+  // place (famille seulement) : ascendant, fratrie, descendant, autre.
+  famille: [
+    { nom: "Pensée de Libellule", lien: "Mère", place: "ascendant", groupe: "Clan de l'Ombre", rang: "", type: "PNJ", joueur: "", vivant: "oui", image: "", notes: "",
       phases: [{ age: 0, appreciation: "pos3", description: "Sa mère. Petit Bison s'est déjà aventurée trop près de la lisière du camp, au grand dam de sa mère." }] },
-    { nom: "Langue d'Ortie", lien: "Baba", clan: "Clan de l'Ombre", rang: "", type: "PNJ", joueur: "", image: "",
+    { nom: "Langue d'Ortie", lien: "Baba", place: "ascendant", groupe: "Clan de l'Ombre", rang: "", type: "PNJ", joueur: "", vivant: "oui", image: "", notes: "",
       phases: [{ age: 0, appreciation: "pos3", description: "Son baba. Elle tient de iel ses oreilles repliées, le seul trait dont elle a hérité, et elle y est très attachée." }] },
-    { nom: "Petit Sanglier", lien: "Frère", clan: "Clan de l'Ombre", rang: "Chaton", type: "PNJ", joueur: "", image: "",
+    { nom: "Petit Sanglier", lien: "Frère", place: "fratrie", groupe: "Clan de l'Ombre", rang: "Chaton", type: "PNJ", joueur: "", vivant: "oui", image: "", notes: "",
       phases: [{ age: 0, appreciation: "pos2", description: "Son frère de nid." }] },
   ],
+
+  relations: [],
 
   fils: [],
 
   galerie: [
-    { titre: "Petit Bison — en bondissant", image: "assets/bison-saute.webp", description: "Fiche d'apparence, pose 1." },
-    { titre: "Petit Bison — assise", image: "assets/bison-assis.webp", description: "Fiche d'apparence, pose 2." },
-    { titre: "Pixel — en marche", image: "assets/sprite-marche.png", description: "Sprite pixel-art." },
-    { titre: "Pixel — assise", image: "assets/sprite-assis.png", description: "Sprite pixel-art." },
-    { titre: "Pixel — le nez en l'air", image: "assets/sprite-regard.png", description: "Sprite pixel-art." },
+    { titre: "Petit Bison — en bondissant", categorie: "Illustrations", image: "assets/bison-saute.webp", description: "Fiche d'apparence, pose 1." },
+    { titre: "Petit Bison — assise", categorie: "Illustrations", image: "assets/bison-assis.webp", description: "Fiche d'apparence, pose 2." },
+    { titre: "Pixel — en marche", categorie: "Pixel-art", image: "assets/sprite-marche.png", description: "Sprite pixel-art." },
+    { titre: "Pixel — assise", categorie: "Pixel-art", image: "assets/sprite-assis.png", description: "Sprite pixel-art." },
+    { titre: "Pixel — le nez en l'air", categorie: "Pixel-art", image: "assets/sprite-regard.png", description: "Sprite pixel-art." },
   ],
 };

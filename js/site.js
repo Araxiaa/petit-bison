@@ -1,21 +1,16 @@
 (function () {
-  const C = window.SITE_CONFIG;
+  const C = window.SITE_CONFIG, O = window.Outils, L = window.Liens;
+  const { esc, fmt, safeSrc, norm } = O;
   const $ = (s, r = document) => r.querySelector(s);
   const app = $("#app");
-  const CACHE = "pb-content-v1";
-  let D = null;
-
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const paras = (arr) => (arr || []).filter(Boolean).map((p, i) => `<p class="rv" style="--i:${i}">${esc(p)}</p>`).join("");
-  const safeSrc = (u) => (/^(https?:\/\/|assets\/|\/)/.test(u || "") ? u : "");
-  const safeLink = (u) => (/^https?:\/\//.test(u || "") ? u : "");
-  const slug = (s) => String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const CACHE = "pb-content-v2";
   const isArr = Array.isArray;
-  const has = (v) => (isArr(v) ? v.length > 0 : !!v);
+  let D = null;
 
   /* ---------- données : cache instantané + rafraîchissement en arrière-plan ---------- */
   function merge(saved) {
     const base = JSON.parse(JSON.stringify(window.DEFAULT_CONTENT));
+    saved = O.migrate(saved);
     if (saved && typeof saved === "object") {
       for (const k of Object.keys(saved)) {
         if (isArr(base[k]) !== isArr(saved[k])) continue;
@@ -24,79 +19,81 @@
     }
     return base;
   }
-  function cached() { try { return JSON.parse(localStorage.getItem(CACHE)); } catch (e) { return null; } }
+  const cached = () => { try { return JSON.parse(localStorage.getItem(CACHE)); } catch (e) { return null; } };
   async function fetchRemote() {
     const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 6000);
     try {
-      const r = await fetch(`${C.SUPABASE_URL}/rest/v1/${C.TABLE}?id=eq.${encodeURIComponent(C.CONTENT_ID)}&select=data`, {
-        headers: { apikey: C.SUPABASE_KEY }, signal: ctl.signal,
-      });
+      const r = await fetch(`${C.SUPABASE_URL}/rest/v1/${C.TABLE}?id=eq.${encodeURIComponent(C.CONTENT_ID)}&select=data`, { headers: { apikey: C.SUPABASE_KEY }, signal: ctl.signal });
       if (!r.ok) return null;
       const rows = await r.json();
       return rows[0] && rows[0].data ? rows[0].data : null;
     } catch (e) { return null; } finally { clearTimeout(to); }
   }
 
-  /* ---------- appréciations ---------- */
-  const HR = '<b class="h r">♥</b>', HG = '<b class="h g">♥</b>';
-  const APP = {
-    pos1: { g: "pos", n: 1, label: "Appréciation positive", html: HR },
-    pos2: { g: "pos", n: 2, label: "Appréciation positive", html: HR + HR },
-    pos3: { g: "pos", n: 3, label: "Appréciation positive", html: HR + HR + HR },
-    neg1: { g: "neg", n: -1, label: "Aversion", html: HG },
-    neg2: { g: "neg", n: -2, label: "Aversion", html: HG + HG },
-    neg3: { g: "neg", n: -3, label: "Aversion", html: HG + HG + HG },
-    neutre: { g: "neutre", n: 0, label: "Neutre", html: HR + HG },
-    respect: { g: "respect", n: 2, label: "Respect", html: '<b class="h s">★</b>' },
-    mort: { g: "mort", n: null, label: "Décédé(e)", html: '<b class="h d">🕊</b>' },
-  };
-  const appr = (k) => APP[k] || APP.neutre;
-  const apprBadge = (k) => `<span class="appr appr-${appr(k).g}" title="${esc(appr(k).label)}">${appr(k).html}</span>`;
-  const phasesOf = (r) => [...(r.phases || [])].sort((a, b) => (Number(a.age) || 0) - (Number(b.age) || 0));
-  const latest = (r) => { const p = phasesOf(r); return p[p.length - 1] || { age: "", appreciation: "neutre", description: "" }; };
-
   /* ---------- éléments communs ---------- */
-  const quote = (q) => (q ? `<blockquote class="rv">« ${esc(q)} »</blockquote>` : "");
-  const title = (kicker, h, sub = "") =>
-    `<header class="page-head"><span class="kicker rv">${esc(kicker)}</span><h1 class="rv" style="--i:1">${esc(h)}</h1>${sub ? `<p class="lead rv" style="--i:2">${esc(sub)}</p>` : ""}</header>`;
-  const cards = (items, cls = "") =>
-    `<div class="grid ${cls}">${(items || []).map((i, n) => `<article class="card tilt rv" style="--i:${n % 6}"><h3>${esc(i.titre)}</h3><p>${esc(i.texte)}</p></article>`).join("")}</div>`;
+  const has = (v) => (isArr(v) ? v.length > 0 : !!v);
+  const quote = (q) => (q ? `<blockquote class="rv">« ${fmt(q)} »</blockquote>` : "");
+  const paras = (arr) => (arr || []).filter(Boolean).map((p, i) => `<p class="rv" style="--i:${i}">${fmt(p)}</p>`).join("");
   const subh = (t) => `<h2 class="sub-h rv">${esc(t)}</h2>`;
   const empty = (t) => `<p class="empty rv">${esc(t)}</p>`;
-  const initials = (n) => n.split(/[\s'’-]+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-  const hue = (n) => [...n].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7);
-  const avatar = (r, cls = "") => {
-    const src = safeSrc(r.image);
-    return src
-      ? `<span class="avatar ${cls}"><img src="${esc(src)}" alt="${esc(r.nom)}" loading="lazy" decoding="async"></span>`
-      : `<span class="avatar mono ${cls}" style="--hue:${hue(r.nom)}">${esc(initials(r.nom))}</span>`;
-  };
+  const cards = (items, cls = "") =>
+    `<div class="grid ${cls}">${(items || []).map((i, n) => `<article class="card tilt rv" style="--i:${n % 6}"><h3>${esc(i.titre)}</h3><p>${fmt(i.texte)}</p></article>`).join("")}</div>`;
+  L.head = (kicker, h, sub = "") =>
+    `<header class="page-head"><span class="kicker rv">${esc(kicker)}</span><h1 class="rv" style="--i:1">${esc(h)}</h1>${sub ? `<p class="lead rv" style="--i:2">${esc(sub)}</p>` : ""}</header>`;
+  L.subTabs = () => "";
 
-  /* ---------- pages ---------- */
+  /* ---------- navigation ---------- */
+  const SUBS_ELLE = [["apercu", "Aperçu"], ["caractere", "Caractère"], ["gouts", "Goûts & habitudes"], ["physique", "Physique"], ["histoire", "Histoire"], ["convictions", "Convictions"]];
+  const SUBS_ENT = [["famille", "Famille"], ["relations", "Relations"]];
+  const NAV = [
+    { id: "", label: "Accueil", href: "#/" },
+    { id: "elle", label: "Elle", href: "#/elle/apercu", subs: SUBS_ELLE },
+    { id: "entourage", label: "Entourage", href: "#/entourage/famille", subs: SUBS_ENT },
+    { id: "fils", label: "Fils RP", href: "#/fils" },
+    { id: "galerie", label: "Galerie", href: "#/galerie" },
+  ];
+  function buildNav() {
+    $("#menu").innerHTML = NAV.map((n) => `<a href="${n.href}" data-r="${n.id}">${n.label}</a>`).join("");
+    $("#volet-nav").innerHTML = NAV.map((n) => `<div class="v-sec"><a class="v-main" href="${n.href}">${n.label}</a>${(n.subs || []).map((s) => `<a href="#/${n.id}/${s[0]}">${s[1]}</a>`).join("")}</div>`).join("");
+  }
+  function markNav(r, sub) {
+    document.querySelectorAll("#menu a").forEach((a) => a.classList.toggle("on", a.dataset.r === r));
+    const sec = NAV.find((n) => n.id === r), bar = $("#sous");
+    if (sec && sec.subs) {
+      bar.innerHTML = sec.subs.map((s) => `<a href="#/${r}/${s[0]}" class="${s[0] === sub ? "on" : ""}">${s[1]}</a>`).join("");
+      bar.hidden = false;
+    } else bar.hidden = true;
+    document.body.classList.toggle("has-sub", !bar.hidden);
+  }
+
+  /* ---------- accueil ---------- */
   function pageHome() {
     const i = D.identite, R = D.reglages || {};
     let n0 = 0;
     const letters = i.nom.split(" ").map((w) => `<span class="w">${[...w].map((c) => `<span class="ch" style="--n:${n0++}">${esc(c)}</span>`).join("")}</span>`).join('<span class="sp"> </span>');
     const traits = [...(D.caractere.qualites || []), ...(D.caractere.defauts || [])].map((t) => t.titre);
     const marquee = [...traits, ...traits].map((t) => `<span>${esc(t)}</span><i></i>`).join("");
-    const living = D.relations.filter((r) => latest(r).appreciation !== "mort").length;
+    const people = L.all();
+    const nFils = (D.fils || []).length;
     const portals = [
-      ["#/personnage", "Le personnage", "Caractère, goûts, physique, histoire et convictions de la petite tornade de l'Ombre.", "✦", ""],
-      ["#/relations", "Relations", "Famille, camarades de nid : l'évolution de chaque lien au fil des lunes.", "♥", `${D.relations.length} liens`],
-      ["#/fils", "Fils RP", "Tous les fils role-play, en cours ou terminés.", "✎", `${D.fils.length} fils`],
+      ["#/elle/apercu", "Elle", "Caractère, goûts, physique, histoire et convictions de la petite tornade de l'Ombre.", "✦", `${SUBS_ELLE.length} rubriques`],
+      ["#/entourage/famille", "Entourage", "Sa famille et ses relations : photos, avis datés, tableau et constellation.", "♥", `${people.length} liens`],
+      ["#/fils", "Fils RP", "Toutes ses scènes, avec le lien direct vers le fil Discord.", "✎", `${nFils} fil${nFils > 1 ? "s" : ""}`],
       ["#/galerie", "Galerie", "Illustrations et pixel-art de Petit Bison.", "❀", `${D.galerie.length} images`],
     ];
+    const q = D.caractere.qualites || [], d = D.caractere.defauts || [];
+    const fils = (D.fils || []).slice(0, 3);
     return `
     <section class="hero">
       <div class="wrap hero-grid">
         <div class="hero-text">
-          <span class="kicker rv">Clan de l'Ombre · ${esc(i.rang)}</span>
+          <span class="kicker rv">Clan de l'Ombre · ${esc(i.rang)} · ${esc(i.lunes)}</span>
           <h1 class="big" aria-label="${esc(i.nom)}">${letters}</h1>
           <p class="sub rv" style="--i:3">${esc(i.sous_titre)}</p>
           ${quote(i.citation)}
           <div class="cta rv" style="--i:4">
-            <a class="btn primary" href="#/personnage">Découvrir Petit Bison</a>
-            <a class="btn ghost" href="#/relations">Sa famille</a>
+            <a class="btn primary" href="#/elle/apercu">Découvrir Petit Bison</a>
+            <a class="btn ghost" href="#/entourage/famille">Son entourage</a>
           </div>
           <div class="stats">
             <div class="stat"><span>PV</span><div class="bar"><i style="--w:${Math.min(100, Number(i.pv))}%"></i></div><b data-count="${Number(i.pv) || 0}">0</b></div>
@@ -106,8 +103,8 @@
         <figure class="portrait">
           <div class="aura"></div><div class="blob"></div>
           <div class="cat"><img src="${esc(safeSrc(i.image) || "assets/bison-saute.webp")}" alt="${esc(i.nom)}, chaton écaille de tortue aux yeux vert prairie" width="900" height="597" fetchpriority="high"></div>
+          <span class="sticker"><b data-count="${parseInt(i.lunes) || 0}">0</b>lunes</span>
           <span class="spot s1"></span><span class="spot s2"></span><span class="spot s3"></span>
-          <span class="petal p1">❀</span><span class="petal p2">✦</span><span class="petal p3">❀</span>
         </figure>
       </div>
       <a class="scroll-hint" href="#portals" onclick="document.getElementById('portals').scrollIntoView({behavior:'smooth'});return false">défiler ↓</a>
@@ -115,39 +112,50 @@
 
     <div class="marquee" aria-hidden="true"><div class="track">${marquee}</div></div>
 
-    <section class="wrap numbers">
-      <div class="num rv"><b data-count="${parseInt(i.lunes) || 0}">0</b><span>lunes</span></div>
-      <div class="num rv" style="--i:1"><b data-count="${D.relations.length}">0</b><span>relations</span></div>
-      <div class="num rv" style="--i:2"><b data-count="${living}">0</b><span>vivant(e)s</span></div>
-      <div class="num rv" style="--i:3"><b data-count="${D.fils.length}">0</b><span>fils RP</span></div>
+    <section class="wrap glance">
+      <div class="gl rv"><b data-count="${parseInt(i.lunes) || 0}">0</b><span>lunes</span></div>
+      <div class="gl rv" style="--i:1"><b data-count="${(D.famille || []).length}">0</b><span>en famille</span></div>
+      <div class="gl rv" style="--i:2"><b data-count="${(D.relations || []).length}">0</b><span>relations</span></div>
+      <div class="gl rv" style="--i:3"><b data-count="${nFils}">0</b><span>fils RP</span></div>
+    </section>
+
+    <section class="wrap traits">
+      <div class="rv"><span class="kicker">Petit Bison, c'est…</span><h2 class="h-big">Un cœur, des pattes, <em>des défauts</em></h2></div>
+      <div class="trait-box rv">
+        <div class="trait-cols">
+          <div><h3>Ses qualités</h3><div class="chips" id="tq">${q.map((t, n) => `<button type="button" class="chip good" data-t="q${n}">${esc(t.titre)}</button>`).join("")}</div></div>
+          <div><h3>Ses défauts</h3><div class="chips" id="td">${d.map((t, n) => `<button type="button" class="chip flaw" data-t="d${n}">${esc(t.titre)}</button>`).join("")}</div></div>
+        </div>
+        <div class="trait-panel" id="trait-panel" aria-live="polite"><p class="muted">Touche un trait pour lire ce qu'il dit d'elle.</p></div>
+      </div>
     </section>
 
     <section id="portals" class="wrap portals">
-      ${portals.map((p, n) => `<a class="portal tilt rv" style="--i:${n}" href="${p[0]}"><span class="p-ico">${p[3]}</span><h2>${p[1]}</h2><p>${p[2]}</p>${p[4] ? `<em>${p[4]}</em>` : ""}<span class="arrow">→</span></a>`).join("")}
+      ${portals.map((p, n) => `<a class="portal tilt rv" style="--i:${n}" href="${p[0]}"><span class="p-ico">${p[3]}</span><h2>${p[1]}</h2><p>${p[2]}</p><em>${p[4]}</em><span class="arrow">→</span></a>`).join("")}
     </section>
 
     <section class="wrap manifesto">
       ${safeSrc(i.image2) ? `<img class="rv sit" src="${esc(safeSrc(i.image2))}" alt="${esc(i.nom)} assise, la queue en panache" loading="lazy" decoding="async" width="900" height="566">` : ""}
       <div class="rv"><span class="kicker">${esc(R.accroche_accueil || "En quelques mots")}</span>
-      <p class="big-quote">${esc((D.caractere.description || [""])[0])}</p></div>
-    </section>`;
+      <p class="big-quote">${fmt((D.caractere.description || [""])[0])}</p><a class="btn ghost" href="#/elle/caractere">Lire son caractère</a></div>
+    </section>
+
+    ${people.length || fils.length ? `<section class="wrap home-duo">
+      ${people.length ? `<div><span class="kicker rv">Son entourage</span><div class="faces rv">${people.slice(0, 8).map((r) => `<a href="${L.href(r)}" title="${esc(r.nom)} — ${esc(r.lien)}">${L.avatar(r, "md")}</a>`).join("")}</div><a class="more rv" href="#/entourage/famille">Voir toute la famille et les relations →</a></div>` : ""}
+      ${fils.length ? `<div><span class="kicker rv">Derniers fils RP</span><ul class="mini-fils rv">${fils.map((f) => `<li><span class="status ${/^en cours/i.test(f.statut || "") ? "live" : ""}">${esc(f.statut || "")}</span> ${O.safeLink(f.lien) ? `<a href="${esc(f.lien)}" target="_blank" rel="noopener noreferrer">${esc(f.titre)} ↗</a>` : esc(f.titre)}</li>`).join("")}</ul><a class="more rv" href="#/fils">Tous les fils →</a></div>` : ""}
+    </section>` : ""}`;
   }
 
-  const SUBS = [["apercu", "Aperçu"], ["caractere", "Caractère"], ["gouts", "Goûts & habitudes"], ["physique", "Physique"], ["histoire", "Histoire"], ["convictions", "Convictions"]];
-
+  /* ---------- elle ---------- */
   function pagePerso(sub) {
-    sub = SUBS.some((s) => s[0] === sub) ? sub : "apercu";
+    sub = SUBS_ELLE.some((s) => s[0] === sub) ? sub : "apercu";
     const i = D.identite;
-    const tabs = `<nav class="tabs rv" aria-label="Sous-pages">${SUBS.map((s) => `<a href="#/personnage/${s[0]}" class="${s[0] === sub ? "on" : ""}">${s[1]}</a>`).join("")}</nav>`;
     let body = "";
     if (sub === "apercu") {
       const facts = [["Lunes", i.lunes], ["Clan", i.clan], ["Rang", i.rang], ["Sexe", i.sexe + (i.note_sexe ? " · " + i.note_sexe : "")], ["Orientation", i.orientation], ["Taille", i.taille], ["Poids", i.poids], ["Joueur·se", i.pseudo_joueur]].filter((f) => f[1]);
-      const l = D.lignee || {};
       body = `<dl class="facts">${facts.map((f, n) => `<div class="tilt rv" style="--i:${n}"><dt>${esc(f[0])}</dt><dd>${esc(f[1])}</dd></div>`).join("")}</dl>
         ${subh("Nomenclature")}
-        <ol class="names">${(D.noms || []).map((n, k) => `<li class="tilt rv" style="--i:${k}"><span class="step">${esc(n.etape)}</span><strong>${esc(n.nom)}</strong>${n.texte ? `<p>${esc(n.texte)}</p>` : ""}</li>`).join("")}</ol>
-        ${has(l.famille) ? subh("Famille") + cards(l.famille, "good") : ""}
-        ${has(l.autres) ? subh("Lignée & mentorat") + cards(l.autres) : ""}`;
+        <ol class="names">${(D.noms || []).map((n, k) => `<li class="tilt rv" style="--i:${k}"><span class="step">${esc(n.etape)}</span><strong>${esc(n.nom)}</strong>${n.texte ? `<p>${fmt(n.texte)}</p>` : ""}</li>`).join("")}</ol>`;
     } else if (sub === "caractere") {
       const c = D.caractere;
       body = `<div class="prose">${paras(c.description)}</div>${subh("Qualités")}${cards(c.qualites, "good")}${subh("Défauts")}${cards(c.defauts, "flaw")}`;
@@ -157,119 +165,29 @@
     } else if (sub === "physique") {
       const p = D.physique, h = p.handicap || {}, a = p.accessoires || {};
       body = `<div class="prose">${paras(p.description)}</div>${subh("Points forts")}${cards(p.forts, "good")}${subh("Points faibles")}${cards(p.faibles, "flaw")}
-        ${has(h.points) || h.intro ? subh("Handicap") + quote(h.citation) + (h.intro ? `<p class="rv">${esc(h.intro)}</p>` : "") + `<ul class="list">${(h.points || []).map((x) => `<li class="rv">${esc(x)}</li>`).join("")}</ul>` : ""}
+        ${has(h.points) || h.intro ? subh("Handicap") + quote(h.citation) + (h.intro ? `<p class="rv">${fmt(h.intro)}</p>` : "") + `<ul class="list">${(h.points || []).map((x) => `<li class="rv">${fmt(x)}</li>`).join("")}</ul>` : ""}
         ${has(a.points) ? subh("Accessoires") + quote(a.citation) + cards(a.points) : ""}
         ${has(p.cicatrices) ? subh("Cicatrices") + `<div class="prose">${paras(p.cicatrices)}</div>` : ""}`;
     } else if (sub === "histoire") {
-      body = `<ol class="timeline">${(D.histoire || []).map((t, n) => `<li class="rv"><span class="dot">${n + 1}</span><p>${esc(t)}</p></li>`).join("")}</ol>`;
+      body = `<ol class="timeline">${(D.histoire || []).map((t, n) => `<li class="rv"><span class="dot">${n + 1}</span><p>${fmt(t)}</p></li>`).join("")}</ol>`;
     } else {
       const v = D.convictions, cl = v.clan || {}, ac = v.autres_clans || {}, et = v.etoiles || {};
       body = `${subh("Relation au clan")}${quote(cl.citation)}<div class="prose">${paras(cl.paragraphes)}</div>
-        ${subh("Avis sur les autres clans")}<p class="rv">${esc(ac.intro)}</p>${cards((ac.clans || []).map((x) => ({ titre: x.nom, texte: x.texte })))}
+        ${subh("Avis sur les autres clans")}<p class="rv prose">${fmt(ac.intro)}</p>${cards((ac.clans || []).map((x) => ({ titre: x.nom, texte: x.texte })))}
         ${subh("Croyance — Clan des Étoiles")}${quote(et.citation)}<div class="prose">${paras(et.paragraphes)}</div>`;
     }
-    return `<section class="wrap page">${title("Le personnage", SUBS.find((s) => s[0] === sub)[1], sub === "apercu" ? i.sous_titre : "")}${tabs}${body}</section>`;
+    return `<section class="wrap page">${L.head("Elle", SUBS_ELLE.find((s) => s[0] === sub)[1], sub === "apercu" ? i.sous_titre : "")}${body}</section>`;
   }
 
-  /* --- relations --- */
-  const relState = { q: "", clan: "", type: "", grp: "" };
-  const LEGEND = [["pos3", "Appréciation positive", "♥ · ♥♥ · ♥♥♥"], ["neg3", "Aversion", "🩶 · 🩶🩶 · 🩶🩶🩶"], ["neutre", "Neutre", ""], ["respect", "Respect", ""], ["mort", "Décédé(e)", ""]];
-
-  function relCard(r, n) {
-    const l = latest(r);
-    return `<a class="rel tilt rv" style="--i:${n % 8}" href="#/relations/${slug(r.nom)}">
-      ${avatar(r)}<div class="rel-body"><h3>${esc(r.nom)}</h3>
-      <p class="muted">${esc(r.lien)}${r.clan ? " · " + esc(r.clan) : ""}</p>
-      <div class="rel-foot">${apprBadge(l.appreciation)}<span class="tag ${r.type === "PJ" ? "pj" : ""}">${esc(r.type || "PNJ")}</span>${r.rang ? `<span class="tag soft">${esc(r.rang)}</span>` : ""}</div></div></a>`;
-  }
-  function relFiltered() {
-    const q = relState.q.trim().toLowerCase();
-    return D.relations.filter((r) => {
-      if (relState.clan && r.clan !== relState.clan) return false;
-      if (relState.type && (r.type || "PNJ") !== relState.type) return false;
-      if (relState.grp && appr(latest(r).appreciation).g !== relState.grp) return false;
-      return !q || [r.nom, r.lien, r.clan, r.rang, r.joueur].join(" ").toLowerCase().includes(q);
-    });
-  }
-  function pageRelations() {
-    const clans = [...new Set(D.relations.map((r) => r.clan).filter(Boolean))];
-    const sel = (id, opts, cur, all) => `<select id="${id}" aria-label="${all}"><option value="">${all}</option>${opts.map((o) => `<option value="${esc(o[0])}" ${o[0] === cur ? "selected" : ""}>${esc(o[1])}</option>`).join("")}</select>`;
-    return `<section class="wrap page">${title("Ceux qui comptent", "Relations", "Chaque lien est daté : l'appréciation évolue avec les lunes.")}
-      <div class="legend rv">${LEGEND.map((l) => `<span class="lg">${APP[l[0]].html}<em>${l[1]}</em></span>`).join("")}</div>
-      <div class="filters rv">
-        <input id="rq" type="search" placeholder="Rechercher un nom, un clan, un rang…" value="${esc(relState.q)}">
-        ${sel("rc", clans.map((c) => [c, c]), relState.clan, "Tous les clans")}
-        ${sel("rt", [["PNJ", "PNJ"], ["PJ", "PJ (joueur·se)"]], relState.type, "PNJ & PJ")}
-        ${sel("rg", [["pos", "Appréciation positive"], ["neg", "Aversion"], ["neutre", "Neutre"], ["respect", "Respect"], ["mort", "Décédé(e)s"]], relState.grp, "Toutes appréciations")}
-      </div>
-      <div id="rel-list"></div></section>`;
-  }
-  function fillRelList() {
-    const list = relFiltered();
-    $("#rel-list").innerHTML = list.length ? `<div class="grid rels">${list.map(relCard).join("")}</div>` : empty("Aucune relation ne correspond à ces filtres.");
-    FX.observe($("#rel-list"));
-  }
-  function bindRelations() {
-    $("#rq").oninput = (e) => { relState.q = e.target.value; fillRelList(); };
-    $("#rc").onchange = (e) => { relState.clan = e.target.value; fillRelList(); };
-    $("#rt").onchange = (e) => { relState.type = e.target.value; fillRelList(); };
-    $("#rg").onchange = (e) => { relState.grp = e.target.value; fillRelList(); };
-    fillRelList();
-  }
-
-  function graph(ph) {
-    const pts = ph.filter((p) => appr(p.appreciation).n !== null);
-    if (pts.length < 2) return "";
-    const ages = pts.map((p) => Number(p.age) || 0), a0 = Math.min(...ages), a1 = Math.max(...ages) || 1;
-    const X = (a) => 40 + ((a - a0) / (a1 - a0 || 1)) * 520, Y = (n) => 90 - n * 26;
-    const d = pts.map((p, i) => `${i ? "L" : "M"}${X(Number(p.age) || 0)},${Y(appr(p.appreciation).n)}`).join(" ");
-    return `<svg class="graph rv" viewBox="0 0 600 180" role="img" aria-label="Évolution de l'appréciation">
-      <line x1="30" x2="580" y1="90" y2="90" class="axis"/><text x="6" y="30" class="lab">♥</text><text x="6" y="160" class="lab">🩶</text>
-      <path d="${d}" class="curve"/>
-      ${pts.map((p) => `<g><circle cx="${X(Number(p.age) || 0)}" cy="${Y(appr(p.appreciation).n)}" r="6" class="pt"/><text x="${X(Number(p.age) || 0)}" y="${Y(appr(p.appreciation).n) + (appr(p.appreciation).n >= 0 ? -14 : 24)}" text-anchor="middle" class="lab">${esc(p.age)} l.</text></g>`).join("")}
-    </svg>`;
-  }
-  function pageRelation(id) {
-    const r = D.relations.find((x) => slug(x.nom) === id);
-    if (!r) return `<section class="wrap page">${title("Relations", "Introuvable")}<p><a class="btn" href="#/relations">← Toutes les relations</a></p></section>`;
-    const ph = phasesOf(r), l = latest(r);
-    return `<section class="wrap page">
-      <a class="back rv" href="#/relations">← Toutes les relations</a>
-      <header class="rel-hero rv">${avatar(r, "xl")}
-        <div><span class="kicker">${esc(r.lien)}</span><h1>${esc(r.nom)}</h1>
-        <div class="rel-foot">${apprBadge(l.appreciation)}<span class="muted">${esc(appr(l.appreciation).label)}</span></div>
-        <div class="chips">${r.clan ? `<span class="tag">${esc(r.clan)}</span>` : ""}${r.rang ? `<span class="tag soft">${esc(r.rang)}</span>` : ""}
-        <span class="tag ${r.type === "PJ" ? "pj" : ""}">${esc(r.type || "PNJ")}${r.type === "PJ" && r.joueur ? " · " + esc(r.joueur) : ""}</span></div></div></header>
-      ${subh("Évolution du lien")}${graph(ph)}
-      <ol class="timeline phases">${ph.map((p) => `<li class="rv"><span class="dot age">${esc(p.age)}<small>lunes</small></span>
-        <div class="phase tilt"><div class="phase-top">${apprBadge(p.appreciation)}<span class="muted">${esc(appr(p.appreciation).label)}</span></div><p>${esc(p.description)}</p></div></li>`).join("")}</ol>
-    </section>`;
-  }
-
-  /* --- fils rp --- */
-  const filState = { s: "" };
-  const statKey = (f) => (f.statut || "").toLowerCase().replace("é", "e");
-  function pageFils() {
-    const sel = filState.s;
-    const list = D.fils.filter((f) => !sel || statKey(f).startsWith(sel));
-    const n = (s) => D.fils.filter((f) => statKey(f).startsWith(s)).length;
-    return `<section class="wrap page">${title("Role-play", "Fils RP", "Tous les fils de Petit Bison.")}
-      <nav class="tabs rv">${[["", `Tous (${D.fils.length})`], ["en cours", `En cours (${n("en cours")})`], ["termine", `Terminés (${n("termine")})`]].map((t) => `<a href="#/fils" data-s="${t[0]}" class="${sel === t[0] ? "on" : ""}">${t[1]}</a>`).join("")}</nav>
-      ${list.length ? `<div class="grid fils">${list.map((f, k) => {
-        const live = statKey(f).startsWith("en cours"), link = safeLink(f.lien);
-        return `<article class="card fil tilt rv" style="--i:${k % 6}">
-          <div class="fil-top"><span class="status ${live ? "live" : ""}">${esc(f.statut || "—")}</span>${f.lunes !== "" && f.lunes != null ? `<span class="muted">${esc(f.lunes)} lunes</span>` : ""}</div>
-          <h3>${esc(f.titre)}</h3><p>${esc(f.description)}</p>
-          <div class="chips">${(f.participants || []).map((p) => `<span class="tag soft">${esc(p)}</span>`).join("")}</div>
-          ${link ? `<a class="btn small primary" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Ouvrir sur Discord ↗</a>` : ""}</article>`;
-      }).join("")}</div>` : empty(D.fils.length ? "Aucun fil dans cette catégorie." : "Aucun fil pour le moment — ils apparaîtront ici dès qu'ils seront ajoutés depuis le dashboard.")}</section>`;
-  }
-
-  /* --- galerie --- */
+  /* ---------- galerie + visionneuse ---------- */
+  const galS = { c: "" };
   function pageGalerie() {
     const g = D.galerie.filter((x) => safeSrc(x.image));
-    return `<section class="wrap page">${title("Illustrations", "Galerie", "Petit Bison en images.")}
-      ${g.length ? `<div class="masonry">${g.map((x, k) => `<figure class="shot tilt rv" style="--i:${k % 6}" data-k="${k}"><img src="${esc(safeSrc(x.image))}" alt="${esc(x.titre)}" loading="lazy" decoding="async"><figcaption>${esc(x.titre)}</figcaption></figure>`).join("")}</div>` : empty("La galerie est vide pour le moment.")}</section>`;
+    const cats = [...new Set(g.map((x) => x.categorie).filter(Boolean))];
+    const list = g.filter((x) => !galS.c || x.categorie === galS.c);
+    return `<section class="wrap page">${L.head("Illustrations", "Galerie", "Petit Bison en images.")}
+      ${cats.length > 1 ? `<nav class="vues rv">${[["", "Tout"], ...cats.map((c) => [c, c])].map((t) => `<a href="#/galerie" data-c="${esc(t[0])}" class="${galS.c === t[0] ? "on" : ""}">${esc(t[1])}</a>`).join("")}</nav>` : ""}
+      ${list.length ? `<div class="masonry">${list.map((x, k) => `<figure class="shot tilt rv" style="--i:${k % 6}" data-k="${k}"><img src="${esc(safeSrc(x.image))}" alt="${esc(x.titre)}" loading="lazy" decoding="async"><figcaption>${esc(x.titre)}</figcaption></figure>`).join("")}</div>` : empty("La galerie est vide pour le moment.")}</section>`;
   }
   let lbIndex = 0, lbList = [];
   function lb(k) {
@@ -277,6 +195,7 @@
     const x = lbList[lbIndex];
     $("img", b).src = safeSrc(x.image); $("img", b).alt = x.titre;
     $("figcaption", b).textContent = [x.titre, x.description].filter(Boolean).join(" — ");
+    b.classList.toggle("single", lbList.length < 2);
     b.hidden = false; document.body.classList.add("noscroll");
   }
   const lbClose = () => { $("#lightbox").hidden = true; document.body.classList.remove("noscroll"); };
@@ -290,51 +209,105 @@
     if (e.key === "Escape") lbClose(); if (e.key === "ArrowLeft") lb(lbIndex - 1); if (e.key === "ArrowRight") lb(lbIndex + 1);
   });
 
-  /* ---------- routeur ---------- */
-  const NAV = [["", "Accueil"], ["personnage", "Personnage"], ["relations", "Relations"], ["fils", "Fils RP"], ["galerie", "Galerie"]];
-  function buildNav() {
-    $("#menu").innerHTML = NAV.map((n) => `<a href="#/${n[0]}" data-r="${n[0]}">${n[1]}</a>`).join("") + '<span class="pill"></span>';
+  /* ---------- recherche ( / ou Ctrl+K ) ---------- */
+  const dlg = $("#search"), sq = $("#search-q"), sl = $("#search-list");
+  let sIndex = [], sSel = 0;
+  function buildIndex() {
+    const t = [];
+    SUBS_ELLE.forEach((s) => t.push({ t: s[1], k: "Elle", h: `#/elle/${s[0]}` }));
+    SUBS_ENT.forEach((s) => t.push({ t: s[1], k: "Entourage", h: `#/entourage/${s[0]}` }));
+    t.push({ t: "Fils RP", k: "Page", h: "#/fils" }, { t: "Galerie", k: "Page", h: "#/galerie" });
+    const addT = (arr, sub, k) => (arr || []).forEach((x) => x.titre && t.push({ t: x.titre, k, h: `#/elle/${sub}` }));
+    addT(D.caractere.qualites, "caractere", "Qualité"); addT(D.caractere.defauts, "caractere", "Défaut");
+    ["aime", "deteste", "peurs", "habitudes"].forEach((g) => addT(D.gouts[g], "gouts", "Goûts"));
+    addT(D.physique.forts, "physique", "Point fort"); addT(D.physique.faibles, "physique", "Point faible");
+    (D.famille || []).forEach((r) => t.push({ t: r.nom, k: "Famille · " + r.lien, h: L.href(r) }));
+    (D.relations || []).forEach((r) => t.push({ t: r.nom, k: "Relation · " + r.lien, h: L.href(r) }));
+    (D.fils || []).forEach((f) => t.push({ t: f.titre, k: "Fil RP", h: "#/fils" }));
+    (D.galerie || []).forEach((g) => t.push({ t: g.titre, k: "Galerie", h: "#/galerie" }));
+    sIndex = t.map((x) => Object.assign(x, { n: norm(x.t + " " + x.k) }));
   }
-  function markNav(r) {
-    document.querySelectorAll("#menu a").forEach((a) => a.classList.toggle("on", a.dataset.r === r));
-    const on = $("#menu a.on"), pill = $("#menu .pill");
-    if (on) { pill.style.width = on.offsetWidth + "px"; pill.style.transform = `translateX(${on.offsetLeft}px)`; pill.style.opacity = 1; } else pill.style.opacity = 0;
+  function showSearch() {
+    const q = norm(sq.value.trim());
+    const res = (q ? sIndex.filter((x) => q.split(/\s+/).every((w) => x.n.includes(w))) : sIndex.slice(0, 8)).slice(0, 12);
+    sSel = 0;
+    sl.innerHTML = res.length ? res.map((x, n) => `<li role="option" class="${n ? "" : "on"}"><a href="${x.h}"><strong>${esc(x.t)}</strong><span>${esc(x.k)}</span></a></li>`).join("") : '<li class="none">Rien ne correspond…</li>';
   }
+  function openSearch() { if (!D) return; buildIndex(); sq.value = ""; showSearch(); dlg.showModal(); sq.focus(); }
+  $("#search-btn").addEventListener("click", openSearch);
+  sq.addEventListener("input", showSearch);
+  sl.addEventListener("click", () => dlg.close());
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  sq.addEventListener("keydown", (e) => {
+    const items = [...sl.querySelectorAll("li:not(.none)")];
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); if (!items.length) return;
+      sSel = (sSel + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items.forEach((li, n) => li.classList.toggle("on", n === sSel)); items[sSel].scrollIntoView({ block: "nearest" });
+    }
+    if (e.key === "Enter" && items[sSel]) { location.hash = items[sSel].querySelector("a").getAttribute("href"); dlg.close(); }
+  });
+  addEventListener("keydown", (e) => {
+    const typing = /input|textarea|select/i.test(document.activeElement && document.activeElement.tagName);
+    if ((e.key === "/" && !typing && !dlg.open) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k")) { e.preventDefault(); openSearch(); }
+  });
 
+  /* ---------- routeur ---------- */
   let first = true, token = 0;
   async function route(silent) {
     if (!D) return;
-    const parts = (location.hash.replace(/^#\/?/, "") || "").split("/").map(decodeURIComponent);
-    const [r = "", a = ""] = parts;
-    let html, after = () => {};
-    if (r === "personnage") html = pagePerso(a);
-    else if (r === "relations") { if (a) html = pageRelation(a); else { html = pageRelations(); after = bindRelations; } }
-    else if (r === "fils") { html = pageFils(); after = () => document.querySelectorAll("[data-s]").forEach((el) => el.addEventListener("click", (e) => { e.preventDefault(); filState.s = el.dataset.s; route(); })); }
-    else if (r === "galerie") { html = pageGalerie(); after = () => { lbList = D.galerie.filter((x) => safeSrc(x.image)); document.querySelectorAll(".shot").forEach((s) => s.addEventListener("click", () => lb(Number(s.dataset.k)))); }; }
-    else html = pageHome();
+    let parts = (location.hash.replace(/^#\/?/, "") || "").split("/").map(decodeURIComponent);
+    if (parts[0] === "personnage") parts[0] = "elle";
+    if (parts[0] === "relations") parts = ["entourage", "relations", parts[1] || ""];
+    const [r = "", a = "", b = ""] = parts;
+    let html, after = () => {}, sub = a;
+    if (r === "elle") {
+      html = pagePerso(a); sub = SUBS_ELLE.some((s) => s[0] === a) ? a : "apercu";
+    } else if (r === "entourage") {
+      if (a === "relations") { const v = L.pageRelations(b); html = v.html; after = () => L.bind(v.vue); }
+      else if (a === "chat") { html = L.pageFiche(b); sub = (L.all().find((x) => O.slug(x.nom) === b) || {})._fam ? "famille" : "relations"; }
+      else { html = L.pageFamille(); sub = "famille"; after = () => L.bind(); }
+    } else if (r === "fils") { html = L.pageFils(); after = () => L.bind(); }
+    else if (r === "galerie") { html = pageGalerie(); after = () => { const gl = D.galerie.filter((x) => safeSrc(x.image)).filter((x) => !galS.c || x.categorie === galS.c); lbList = gl; document.querySelectorAll(".shot").forEach((s) => s.addEventListener("click", () => lb(Number(s.dataset.k)))); }; }
+    else if (r === "" || r === "accueil") { html = pageHome(); after = bindHome; }
+    else { html = pageHome(); after = bindHome; }
 
     const my = ++token;
-    if (!first && !silent) { app.classList.add("leave"); await new Promise((res) => setTimeout(res, 200)); if (my !== token) return; }
+    if (!first && !silent) { app.classList.add("leave"); await new Promise((res) => setTimeout(res, 180)); if (my !== token) return; }
     first = false;
     const y = scrollY;
     app.innerHTML = html; app.classList.remove("leave");
     if (!silent) app.classList.add("enter");
     document.body.dataset.page = r || "home";
     document.body.classList.remove("menu-open"); $("#burger").setAttribute("aria-expanded", "false");
-    markNav(r); silent ? scrollTo(0, y) : scrollTo(0, 0); after(); FX.observe(app);
+    markNav(r === "accueil" ? "" : r, sub); silent ? scrollTo(0, y) : scrollTo(0, 0); after(); FX.observe(app);
     if (!silent) setTimeout(() => app.classList.remove("enter"), 700);
-    document.title = (r ? { personnage: "Personnage", relations: "Relations", fils: "Fils RP", galerie: "Galerie" }[r] + " — " : "") + D.identite.nom;
+    const names = { elle: "Elle", entourage: "Entourage", fils: "Fils RP", galerie: "Galerie" };
+    document.title = (names[r] ? names[r] + " — " : "") + D.identite.nom;
   }
 
-  function apply(d) {
-    D = d;
-    const R = D.reglages || {};
-    $("#credits").textContent = D.identite.credits || "";
-    $("#foot-text").textContent = R.texte_pied || "Personnage créé par";
-    document.querySelectorAll(".brand").forEach((b) => (b.lastChild.textContent = D.identite.nom));
-    const m = { marche: safeSrc(R.sprite_marche), assis: safeSrc(R.sprite_assis), regard: safeSrc(R.sprite_regard) };
-    FX.mascot(m, R.mascotte !== "non" && R.mascotte !== false);
+  function bindHome() {
+    const panel = $("#trait-panel"); if (!panel) return;
+    const items = { q: D.caractere.qualites || [], d: D.caractere.defauts || [] };
+    document.querySelectorAll(".chip[data-t]").forEach((c) => c.addEventListener("click", () => {
+      document.querySelectorAll(".chip.on").forEach((x) => x.classList.remove("on")); c.classList.add("on");
+      const it = items[c.dataset.t[0]][Number(c.dataset.t.slice(1))];
+      panel.innerHTML = `<h3>${esc(it.titre)}</h3><p>${fmt(it.texte)}</p>`;
+      panel.classList.remove("pop"); void panel.offsetWidth; panel.classList.add("pop");
+    }));
   }
+
+  /* ---------- clics globaux ---------- */
+  document.addEventListener("click", (e) => {
+    const z = e.target.closest("[data-zoom]");
+    if (z) { lbList = [{ image: z.dataset.zoom, titre: z.dataset.cap || "", description: "" }]; lb(0); return; }
+    const row = e.target.closest("tr[data-href]");
+    if (row && !e.target.closest("a")) { location.hash = row.dataset.href; return; }
+    const fs = e.target.closest("[data-s]");
+    if (fs) { e.preventDefault(); L.filState.s = fs.dataset.s; route(true); return; }
+    const gc = e.target.closest("[data-c]");
+    if (gc) { e.preventDefault(); galS.c = gc.dataset.c; route(true); }
+  });
 
   /* ---------- interface ---------- */
   $("#burger").addEventListener("click", () => {
@@ -345,20 +318,23 @@
   setTheme(document.documentElement.dataset.theme === "night" ? "night" : "day");
   themeBtn.addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "night" ? "day" : "night"));
   addEventListener("scroll", () => $("#nav").classList.toggle("stuck", scrollY > 20), { passive: true });
-  addEventListener("resize", () => markNav((location.hash.replace(/^#\/?/, "").split("/")[0]) || ""));
   addEventListener("hashchange", () => route());
 
+  function apply(d) {
+    D = d; L.D = d;
+    const R = D.reglages || {};
+    $("#credits").textContent = D.identite.credits || "";
+    $("#foot-text").textContent = R.texte_pied || "Personnage créé par";
+    document.querySelectorAll(".brand-name").forEach((b) => (b.textContent = D.identite.nom));
+    FX.mascot({ marche: safeSrc(R.sprite_marche), assis: safeSrc(R.sprite_assis), regard: safeSrc(R.sprite_regard) }, R.mascotte !== "non" && R.mascotte !== false);
+  }
   buildNav();
-  const start = () => {
-    const c = cached();
-    apply(merge(c));
-    route();
-    fetchRemote().then((remote) => {
-      if (!remote) return;
-      const same = c && JSON.stringify(c) === JSON.stringify(remote);
-      try { localStorage.setItem(CACHE, JSON.stringify(remote)); } catch (e) {}
-      if (!same) { apply(merge(remote)); route(true); }
-    });
-  };
-  window.FX ? start() : addEventListener("DOMContentLoaded", start);
+  const c0 = cached();
+  apply(merge(c0)); route();
+  fetchRemote().then((remote) => {
+    if (!remote) return;
+    const same = c0 && JSON.stringify(c0) === JSON.stringify(remote);
+    try { localStorage.setItem(CACHE, JSON.stringify(remote)); } catch (e) {}
+    if (!same) { apply(merge(remote)); route(true); }
+  });
 })();

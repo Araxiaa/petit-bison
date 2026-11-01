@@ -2,39 +2,61 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Petit Bison — Chaton du Clan de l'Ombre</title>
-  <meta name="description" content="Petit Bison, chaton du Clan de l'Ombre : fiche, relations, fils RP et galerie.">
-  <meta name="theme-color" content="#f1e4d2">
+  <meta name="description" content="Petit Bison, chaton du Clan de l'Ombre : fiche, famille, relations, fils RP et galerie.">
+  <meta name="theme-color" content="#f4e9d8">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Petit Bison — Chaton du Clan de l'Ombre">
+  <meta property="og:description" content="Une petite tornade au grand cœur, aux yeux vert prairie.">
+  <meta property="og:locale" content="fr_FR">
   <link rel="icon" href="assets/sprite-regard.png" type="image/png">
+  <link rel="preload" href="assets/fonts/kaushan.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" as="image" href="assets/bison-saute.webp" fetchpriority="high">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/site.css?v=mvxz1gqn">
   <script>try{var t=localStorage.getItem("pb-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
+  <a class="skip" href="#app">Aller au contenu</a>
+  <div class="progress" id="progress" aria-hidden="true"></div>
   <div class="mist" aria-hidden="true"><i></i><i></i><i></i></div>
   <canvas id="fx" aria-hidden="true"></canvas>
   <div class="glow" aria-hidden="true"></div>
 
-  <a class="skip" href="#app">Aller au contenu</a>
   <header class="nav" id="nav">
-    <a class="brand" href="#/"><span class="brand-mark" aria-hidden="true"></span>Petit Bison</a>
+    <a class="brand" href="#/" aria-label="Petit Bison, accueil">
+      <svg class="brand-mark" viewBox="0 0 40 32" aria-hidden="true">
+        <path d="M5 12 2 21l9-11zM35 12l3 9-9-11z" fill="var(--orange)"/>
+        <path d="M4 18C4 8 12 3 20 3s16 5 16 15c0 8-7 12-16 12S4 26 4 18z" fill="var(--logo)"/>
+        <path d="M17 4c1 4-1 7-3 9 4-1 8-1 11 1-2-3-2-7-1-10z" fill="var(--orange)" opacity=".5"/>
+        <ellipse cx="13" cy="18" rx="5" ry="5.6" fill="var(--eye-l)"/><ellipse cx="27" cy="18" rx="5" ry="5.6" fill="var(--eye-l)"/>
+        <circle class="pup" cx="13" cy="18" r="2.5"/><circle class="pup" cx="27" cy="18" r="2.5"/>
+      </svg>
+      <span class="brand-name">Petit Bison</span>
+    </a>
     <nav id="menu" aria-label="Navigation principale"></nav>
-    <button class="icon-btn" id="theme" aria-label="Changer d'ambiance (jour / brume)" title="Jour / Brume">☾</button>
-    <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false">☰</button>
+    <div class="tools">
+      <button class="icon-btn" id="search-btn" aria-label="Rechercher (touche /)" title="Rechercher ( / )"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.500" cy="10.500" r="6.500" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.500 15.500 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn" id="theme" aria-label="Changer d'ambiance (jour / brume)" title="Jour / Brume">☾</button>
+      <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="volet">☰</button>
+    </div>
   </header>
+  <nav class="sous" id="sous" aria-label="Sous-pages" hidden></nav>
+  <div class="volet" id="volet"><nav id="volet-nav" aria-label="Toutes les pages"></nav></div>
 
-  <main id="app" aria-live="polite"><p class="loading">Chargement…</p></main>
+  <main id="app" aria-live="polite"><p class="loading">Petit Bison arrive… (en trébuchant)</p></main>
 
   <footer>
-    <p class="foot-title">Petit Bison</p>
-    <p><span id="foot-text">Personnage créé par</span> <span id="credits">.araxia.</span> · Clan de l'Ombre</p>
-    <p><a href="admin.html" class="admin-link">Espace admin</a></p>
+    <svg class="reeds" id="reeds" viewBox="0 0 1200 170" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div class="foot-in">
+      <p class="foot-title">Petit Bison</p>
+      <p><span id="foot-text">Personnage créé par</span> <span id="credits">.araxia.</span> · Clan de l'Ombre</p>
+      <p><a href="admin.html" class="admin-link">Espace admin</a></p>
+    </div>
   </footer>
 
+  <button class="up" id="up" aria-label="Remonter en haut de la page">↑</button>
   <div id="mascot" class="mascot" hidden aria-hidden="true"><img alt="" width="111" height="108"></div>
 
   <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image agrandie">
@@ -44,9 +66,17 @@
     <button class="lb-nav next" aria-label="Suivante">›</button>
   </div>
 
-  <script src="js/config.js"></script>
-  <script src="js/content.js"></script>
-  <script src="js/fx.js" defer></script>
-  <script src="js/site.js" defer></script>
+  <dialog id="search" aria-label="Rechercher dans le site">
+    <input type="search" id="search-q" placeholder="Une page, un trait, un chat, un fil…" autocomplete="off" aria-label="Rechercher">
+    <ul id="search-list" role="listbox"></ul>
+    <p class="search-help"><kbd>↑</kbd> <kbd>↓</kbd> choisir · <kbd>Entrée</kbd> ouvrir · <kbd>Échap</kbd> fermer</p>
+  </dialog>
+
+  <script src="js/outils.js?v=mvxz1gqn"></script>
+  <script src="js/config.js?v=mvxz1gqn"></script>
+  <script src="js/content.js?v=mvxz1gqn"></script>
+  <script src="js/ambiance.js?v=mvxz1gqn" defer></script>
+  <script src="js/liens.js?v=mvxz1gqn" defer></script>
+  <script src="js/site.js?v=mvxz1gqn" defer></script>
 </body>
 </html>

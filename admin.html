@@ -3,22 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
+  <meta name="robots" content="noindex, nofollow">
   <title>Dashboard — Petit Bison</title>
   <link rel="icon" href="assets/sprite-regard.png" type="image/png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="preload" href="assets/fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/site.css?v=mvxz1gqn">
+  <link rel="stylesheet" href="css/admin.css?v=mvxz1gqn">
   <script>try{var t=localStorage.getItem("pb-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body class="admin">
   <section id="login" class="login" hidden>
     <div class="login-card">
+      <img src="assets/sprite-regard.png" alt="" class="login-cat" width="75" height="78">
       <h1>Dashboard</h1>
       <p>Espace réservé à la gestion du site de <em>Petit Bison</em>.</p>
-      <button id="btn-login" class="btn primary">Se connecter avec Discord</button>
+      <button id="btn-login" class="btn primary" type="button">Se connecter avec Discord</button>
       <p id="login-msg" class="msg" role="alert"></p>
       <p><a href="index.html">← Retour au site</a></p>
     </div>
@@ -26,28 +25,39 @@
 
   <div id="dash" hidden>
     <header class="bar-top">
-      <strong class="brand">Dashboard</strong>
+      <strong class="brand-name">Dashboard</strong>
       <span id="who" class="who"></span>
-      <span id="dirty" class="dirty" hidden>● Modifications non enregistrées</span>
       <span class="spacer"></span>
+      <span id="state" class="state ok">● Tout est enregistré</span>
+      <button id="btn-theme" class="icon-btn" type="button" title="Jour / Brume" aria-label="Jour / Brume">☾</button>
       <a class="btn small" href="index.html" target="_blank" rel="noopener">Voir le site ↗</a>
-      <button id="btn-export" class="btn small">Exporter JSON</button>
-      <label class="btn small" for="file-import">Importer JSON</label>
-      <input id="file-import" type="file" accept="application/json" hidden>
-      <button id="btn-reset" class="btn small">Valeurs par défaut</button>
-      <button id="btn-save" class="btn small primary">Enregistrer</button>
-      <button id="btn-logout" class="btn small">Déconnexion</button>
+      <button id="btn-undo" class="btn small" type="button" title="Recharger la dernière version enregistrée" disabled>Annuler</button>
+      <button id="btn-save" class="btn small primary" type="button" title="Ctrl + S">Enregistrer</button>
+      <details class="more-menu">
+        <summary class="btn small" aria-label="Plus d'actions">⋯</summary>
+        <div>
+          <button id="btn-export" type="button">Exporter une sauvegarde (JSON)</button>
+          <label for="file-import">Importer une sauvegarde…</label><input id="file-import" type="file" accept="application/json" hidden>
+          <button id="btn-reset" type="button">Revenir aux valeurs par défaut</button>
+          <button id="btn-logout" type="button">Se déconnecter</button>
+        </div>
+      </details>
     </header>
+    <div id="banner" class="banner" hidden></div>
     <div class="layout">
-      <nav id="tabs" class="tabs-side" aria-label="Sections"></nav>
-      <main id="editor" class="editor"></main>
+      <nav id="tabs" class="side" aria-label="Rubriques"></nav>
+      <main class="editor-wrap">
+        <div class="sec-head"><div><h1 id="sec-title"></h1><p id="sec-help" class="sec-help"></p></div><div id="sec-actions"></div></div>
+        <div id="editor" class="editor"></div>
+      </main>
     </div>
-    <div id="toast" class="toast" role="status"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/content.js"></script>
-  <script src="js/admin.js"></script>
+  <script src="js/outils.js?v=mvxz1gqn"></script>
+  <script src="js/config.js?v=mvxz1gqn"></script>
+  <script src="js/content.js?v=mvxz1gqn"></script>
+  <script src="js/admin.js?v=mvxz1gqn"></script>
 </body>
 </html>
