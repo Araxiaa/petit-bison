@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Dashboard — Petit Bison</title>
+  <link rel="icon" href="assets/sprite-regard.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script>try{var t=localStorage.getItem("pb-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body class="admin">
+  <section id="login" class="login" hidden>
+    <div class="login-card">
+      <h1>Dashboard</h1>
+      <p>Espace réservé à la gestion du site de <em>Petit Bison</em>.</p>
+      <button id="btn-login" class="btn primary">Se connecter avec Discord</button>
+      <p id="login-msg" class="msg" role="alert"></p>
+      <p><a href="index.html">← Retour au site</a></p>
+    </div>
+  </section>
+
+  <div id="dash" hidden>
+    <header class="bar-top">
+      <strong class="brand">Dashboard</strong>
+      <span id="who" class="who"></span>
+      <span id="dirty" class="dirty" hidden>● Modifications non enregistrées</span>
+      <span class="spacer"></span>
+      <a class="btn small" href="index.html" target="_blank" rel="noopener">Voir le site ↗</a>
+      <button id="btn-export" class="btn small">Exporter JSON</button>
+      <label class="btn small" for="file-import">Importer JSON</label>
+      <input id="file-import" type="file" accept="application/json" hidden>
+      <button id="btn-reset" class="btn small">Valeurs par défaut</button>
+      <button id="btn-save" class="btn small primary">Enregistrer</button>
+      <button id="btn-logout" class="btn small">Déconnexion</button>
+    </header>
+    <div class="layout">
+      <nav id="tabs" class="tabs-side" aria-label="Sections"></nav>
+      <main id="editor" class="editor"></main>
+    </div>
+    <div id="toast" class="toast" role="status"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

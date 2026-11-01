@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Petit Bison — Chaton du Clan de l'Ombre</title>
+  <meta name="description" content="Petit Bison, chaton du Clan de l'Ombre : fiche, relations, fils RP et galerie.">
+  <meta name="theme-color" content="#f1e4d2">
+  <link rel="icon" href="assets/sprite-regard.png" type="image/png">
+  <link rel="preload" as="image" href="assets/bison-saute.webp" fetchpriority="high">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script>try{var t=localStorage.getItem("pb-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+</head>
+<body>
+  <div class="mist" aria-hidden="true"><i></i><i></i><i></i></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div class="glow" aria-hidden="true"></div>
+
+  <a class="skip" href="#app">Aller au contenu</a>
+  <header class="nav" id="nav">
+    <a class="brand" href="#/"><span class="brand-mark" aria-hidden="true"></span>Petit Bison</a>
+    <nav id="menu" aria-label="Navigation principale"></nav>
+    <button class="icon-btn" id="theme" aria-label="Changer d'ambiance (jour / brume)" title="Jour / Brume">☾</button>
+    <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false">☰</button>
+  </header>
+
+  <main id="app" aria-live="polite"><p class="loading">Chargement…</p></main>
+
+  <footer>
+    <p class="foot-title">Petit Bison</p>
+    <p><span id="foot-text">Personnage créé par</span> <span id="credits">.araxia.</span> · Clan de l'Ombre</p>
+    <p><a href="admin.html" class="admin-link">Espace admin</a></p>
+  </footer>
+
+  <div id="mascot" class="mascot" hidden aria-hidden="true"><img alt="" width="111" height="108"></div>
+
+  <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image agrandie">
+    <button class="lb-close" aria-label="Fermer">✕</button>
+    <button class="lb-nav prev" aria-label="Précédente">‹</button>
+    <figure><img alt=""><figcaption></figcaption></figure>
+    <button class="lb-nav next" aria-label="Suivante">›</button>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/fx.js" defer></script>
+  <script src="js/site.js" defer></script>
+</body>
+</html>
