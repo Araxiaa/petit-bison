@@ -22,8 +22,8 @@
     group: (k, title, fields, o) => ({ t: "group", k, title, fields, ...o }),
     items: (k, label, fields, o) => ({ t: "items", k, label, fields, ...o }),
   };
-  const APPS = [["pos1", "♥"], ["pos2", "♥♥"], ["pos3", "♥♥♥"], ["neg1", "🩶"], ["neg2", "🩶🩶"], ["neg3", "🩶🩶🩶"], ["neutre", "♥🩶"], ["respect", "★"], ["mort", "🕊"]];
-  const APP_LABEL = { pos1: "Appréciation (1)", pos2: "Appréciation (2)", pos3: "Appréciation (3)", neg1: "Aversion (1)", neg2: "Aversion (2)", neg3: "Aversion (3)", neutre: "Neutre", respect: "Respect", mort: "Décédé·e" };
+  const APPS = Object.entries(O.APP).map(([k, v]) => [k, v.glyph]);
+  const APP_LABEL = Object.fromEntries(Object.entries(O.APP).map(([k, v]) => [k, v.label]));
   const GROUPES = ["Clan de l'Ombre", "Clan du Vent", "Clan du Tonnerre", "Clan de la Rivière", "Solitaire", "Chat domestique"];
 
   const groupList = () => [...new Set([...GROUPES, ...[...(state.famille || []), ...(state.relations || [])].map((r) => r.groupe).filter(Boolean)])];
@@ -46,19 +46,26 @@
     F.img("image", "Photo", { hint: "visible sur la fiche, en carte et dans la constellation" }),
     F.area("notes", "Notes", { hint: "affichées sur la fiche (optionnel)", rows: 3 }),
     F.items("phases", "Évolution de l'avis (avis datés)", [
-      F.group("", "", [F.num("age", "À la lune n°"), F.hearts("appreciation", "Avis de Petit Bison")], { bare: true, cols: true }),
+      F.group("", "", [F.num("age", "À la lune n°"), F.hearts("appreciation", "Avis de Petit Bison", { hint: "🐸 elle aime · 🐿️ elle n'aime pas · 🌫️ pas d'avis tranché" })], { bare: true, cols: true }),
+      F.yes("respect", "Respect de bison 🦬 : en plus de l'avis, elle le·la respecte", { def: "non" }),
       F.area("description", "Ce qui s'est passé", { rows: 3 }),
     ], { sort: "age", sub: true, addLabel: "+ Ajouter un avis", sample: () => ({ age: parseInt(state.identite.lunes) || 0, appreciation: "neutre", description: "" }), sum: sumPhase }),
   ];
-  const sumPhase = (it) => ({ title: `Lune ${it.age ?? "?"}`, sub: (it.description || "").slice(0, 80), badges: [`<span class="tag soft">${esc(APP_LABEL[it.appreciation] || "")}</span>`] });
+  const sumPhase = (it) => ({ title: `Lune ${it.age ?? "?"}`, sub: (it.description || "").slice(0, 80), badges: [`<span class="tag soft">${(O.APP[it.appreciation] || {}).glyph || ""}${it.respect === "oui" ? O.BISON : ""} ${esc(APP_LABEL[it.appreciation] || "")}</span>`] });
   const latestApp = (r) => { const p = [...(r.phases || [])].sort((a, b) => (a.age || 0) - (b.age || 0)); return (p[p.length - 1] || {}).appreciation; };
   const sumRel = (it) => ({
     title: it.nom || "(sans nom)", sub: [it.lien, it.groupe].filter(Boolean).join(" · "), thumb: it.image, mono: it.nom,
-    badges: [`<span class="tag ${it.type === "PJ" ? "pj" : "soft"}">${esc(it.type || "PNJ")}</span>`, it.vivant === "non" ? '<span class="tag dead">🕊</span>' : "", latestApp(it) ? `<span class="tag soft">${(APPS.find((a) => a[0] === latestApp(it)) || [])[1] || ""}</span>` : ""],
+    badges: [`<span class="tag ${it.type === "PJ" ? "pj" : "soft"}">${esc(it.type || "PNJ")}</span>`, it.vivant === "non" ? '<span class="tag dead">🕊</span>' : "", latestApp(it) ? `<span class="tag soft">${(O.APP[latestApp(it)] || {}).glyph || ""}</span>` : ""],
   });
   const sumFil = (it) => ({ title: it.titre || "(sans titre)", sub: [it.statut, it.lunes !== "" && it.lunes != null ? it.lunes + " lunes" : ""].filter(Boolean).join(" · "), badges: [O.safeLink(it.lien) ? '<span class="tag" style="background:#5865f2;color:#fff">Discord ✓</span>' : '<span class="tag soft">sans lien</span>'] });
   const sumGal = (it) => ({ title: it.titre || "(sans titre)", sub: it.categorie || "", thumb: it.image, mono: it.titre });
 
+  const BLOCK_TYPES = [["paragraphe", "¶ Paragraphe"], ["intertitre", "H Intertitre"], ["citation", "❝ Citation"], ["encart", "💡 Encart « À retenir »"], ["liste", "🐾 Liste à puces"], ["image", "🖼 Image"], ["separateur", "✦ Séparateur"]];
+  const lunesTxt = (it) => (it.lune_fin === "" || it.lune_fin == null || it.lune_fin === it.lune_debut ? `Lune ${it.lune_debut ?? "?"}` : `Lunes ${it.lune_debut} → ${it.lune_fin}`);
+  const sumChap = (it) => ({ title: it.titre || "(chapitre sans titre)", sub: lunesTxt(it) + (it.accroche ? " · " + it.accroche.slice(0, 50) : ""), badges: [`<span class="tag soft">${(it.blocs || []).length} bloc${(it.blocs || []).length > 1 ? "s" : ""}</span>`] });
+  const sumBloc = (it) => ({ title: (BLOCK_TYPES.find((t) => t[0] === it.type) || ["", it.type])[1], sub: String(it.texte || it.legende || "").slice(0, 90) });
+  const SANTE_T = { maladie: "🤒 Maladie", blessure: "🩹 Blessure", convalescence: "🌿 Convalescence", autre: "✚ Autre" };
+  const sumSante = (it) => ({ title: it.titre || "(sans titre)", sub: `${SANTE_T[it.type] || ""} · ${it.en_cours === "oui" ? "depuis la lune " + it.lune_debut + " · en cours" : lunesTxt(it)}`, badges: [it.confinee === "oui" ? '<span class="tag soft">🏕 tanière</span>' : "", it.sequelles === "oui" ? '<span class="tag dead">⚠ séquelles</span>' : "", it.en_cours === "oui" ? '<span class="tag live">en cours</span>' : ""] });
   const SECTIONS = [
     { g: "Général", list: [
       { id: "vue", ic: "🏠", label: "Vue d'ensemble", title: "Vue d'ensemble", help: "Bienvenue ! Ici, tu contrôles tout le site de Petit Bison. Rien n'est publié tant que tu n'as pas cliqué sur « Enregistrer »." },
@@ -81,7 +88,34 @@
         F.group("physique.handicap", "Handicap", [F.text("citation", "Citation"), F.area("intro", "Introduction", { rows: 3 }), F.strs("points", "Points")]),
         F.group("physique.accessoires", "Accessoires", [F.text("citation", "Citation"), textCards("points", "Accessoires")]),
         F.paras("physique.cicatrices", "Cicatrices (un bloc = un paragraphe)")] },
-      { id: "histoire", ic: "📜", label: "Histoire", help: "La chronologie de sa vie, étape par étape (du plus ancien au plus récent).", defs: [F.paras("histoire", "Étapes", { short: false, rows: 3, addLabel: "+ Ajouter une étape" })] },
+      { id: "sante", ic: "🩹", label: "Carnet de santé", help: "Maladies, blessures, convalescences : quand, pourquoi, soins, séjour à la tanière du guérisseur, séquelles. Le site en tire une frise et des fiches de soins.", defs: [F.items("sante", "Entrées du carnet", [
+        F.text("titre", "Titre", { ph: "Toux de brume, patte foulée…" }),
+        F.group("", "", [F.sel("type", "Type", [["maladie", "🤒 Maladie"], ["blessure", "🩹 Blessure"], ["convalescence", "🌿 Convalescence"], ["autre", "✚ Autre"]]), F.sel("gravite", "Gravité", [["legere", "Légère"], ["moyenne", "Moyenne"], ["grave", "Grave"]])], { bare: true, cols: true }),
+        F.group("", "", [F.num("lune_debut", "Lune du début"), F.num("lune_fin", "Lune de la fin", { show: (it) => it.en_cours !== "oui" })], { bare: true, cols: true }),
+        F.yes("en_cours", "Toujours en cours", { def: "non", refresh: true }),
+        F.area("cause", "Pourquoi ? (ce qui s'est passé)", { rows: 3 }),
+        F.area("soins", "Soins reçus (herbes, guérisseur…)", { rows: 3 }),
+        F.yes("confinee", "Confinée dans la tanière du guérisseur", { def: "non", refresh: true }),
+        F.area("confinement_texte", "Détails du séjour à la tanière (combien de temps, pourquoi…)", { show: (it) => it.confinee === "oui", rows: 2 }),
+        F.yes("sequelles", "Il reste des séquelles", { def: "non", refresh: true }),
+        F.area("sequelles_texte", "Quelles séquelles ?", { show: (it) => it.sequelles === "oui", rows: 2 }),
+        F.area("notes", "Notes (optionnel)", { rows: 2 }),
+      ], { sum: sumSante, addLabel: "+ Ajouter une entrée au carnet", search: true, sample: () => ({ titre: "", type: "maladie", gravite: "legere", lune_debut: parseInt(state.identite.lunes) || 0, lune_fin: parseInt(state.identite.lunes) || 0, en_cours: "non", cause: "", soins: "", confinee: "non", confinement_texte: "", sequelles: "non", sequelles_texte: "", notes: "" }) })] },
+      { id: "histoire", ic: "📜", label: "Histoire (chapitres)", help: "Découpe sa vie en chapitres, « de telle lune à telle lune ». Dans chaque chapitre, ajoute des blocs : paragraphes, intertitres, citations, encarts « À retenir », listes, images, séparateurs.", defs: [F.items("histoire", "Chapitres", [
+        F.text("titre", "Titre du chapitre", { ph: "Les premières lunes" }),
+        F.group("", "", [F.num("lune_debut", "De la lune"), F.num("lune_fin", "À la lune")], { bare: true, cols: true }),
+        F.text("accroche", "Accroche (une phrase sous le titre)"),
+        F.items("blocs", "Contenu du chapitre", [
+          F.sel("type", "Type de bloc", BLOCK_TYPES, { refresh: true }),
+          F.text("texte", "Intertitre", { show: (b) => b.type === "intertitre" }),
+          F.area("texte", "Texte", { show: (b) => ["paragraphe", "citation", "encart"].includes(b.type), rows: 5 }),
+          F.area("texte", "Points de la liste (un par ligne)", { show: (b) => b.type === "liste", rows: 4, plain: true }),
+          F.text("auteur", "Qui parle ? (optionnel)", { show: (b) => b.type === "citation" }),
+          F.text("titre", "Titre de l'encart", { show: (b) => b.type === "encart", ph: "À retenir" }),
+          F.img("image", "Image", { show: (b) => b.type === "image" }),
+          F.text("legende", "Légende", { show: (b) => b.type === "image" }),
+        ], { sub: true, sum: sumBloc, addMenu: BLOCK_TYPES.map((t) => ["+ " + t[1].replace(/^\S+\s/, ""), { type: t[0] }]), blank: () => ({ type: "paragraphe", texte: "", titre: "", auteur: "", image: "", legende: "" }) }),
+      ], { sort: "lune_debut", sum: sumChap, addLabel: "+ Ajouter un chapitre", sample: () => ({ titre: "", lune_debut: parseInt(state.identite.lunes) || 0, lune_fin: parseInt(state.identite.lunes) || 0, accroche: "", blocs: [{ type: "paragraphe", texte: "", titre: "", auteur: "", image: "", legende: "" }] }) })] },
       { id: "convictions", ic: "⭐", label: "Convictions", help: "Son rapport au clan, aux autres clans et au Clan des Étoiles.", defs: [
         F.group("convictions.clan", "Relation au clan", [F.text("citation", "Citation"), F.paras("paragraphes", "Texte")]),
         F.group("convictions.autres_clans", "Avis sur les autres clans", [F.area("intro", "Introduction"), F.items("clans", "Clans", [F.text("nom", "Clan"), F.area("texte", "Avis")], { sum: (it) => ({ title: it.nom || "—", sub: (it.texte || "").slice(0, 70) }) })]),
@@ -203,7 +237,7 @@
         w.append(s); return w;
       }
       case "yes": {
-        const [o, kk] = ensure(obj, k, () => "oui");
+        const [o, kk] = ensure(obj, k, () => d.def || "oui");
         const w = el("div", "field"); w.innerHTML = d.hint ? lab({ label: "", hint: d.hint }) : "";
         const l = el("label", "switch"), i = el("input"); i.type = "checkbox"; i.checked = o[kk] !== "non";
         const t = el("span", "", esc(d.label)); const sw = el("i");
@@ -216,6 +250,7 @@
         const w = el("div", "field"); w.innerHTML = lab(d);
         const box = el("div", "hearts");
         APPS.filter((a) => a[0] !== "mort" || o[kk] === "mort").forEach(([v, h]) => {
+          if (v === "neutre") box.append(el("span", "hsep", "|"));
           const b = el("button", v === o[kk] ? "on" : "", `${h} <small>${APP_LABEL[v]}</small>`); b.type = "button";
           b.onclick = () => { o[kk] = v; box.querySelectorAll("button").forEach((x) => x.classList.remove("on")); b.classList.add("on"); ctx.change(); };
           box.append(b);
@@ -310,6 +345,16 @@
       });
     }
     if (d.search && arr.length > 5) { const s = el("input"); s.type = "search"; s.placeholder = "Filtrer…"; s.oninput = () => { q = s.value.toLowerCase(); draw(); }; bar.append(s); root.append(bar); }
+    if (d.addMenu) {
+      foot.hidden = true;
+      const menu = el("div", "addmenu");
+      d.addMenu.forEach(([t, preset]) => {
+        const b = el("button", "add", esc(t)); b.type = "button";
+        b.onclick = () => { const n = Object.assign(d.blank(), preset); arr.push(n); openSet.add(n); q = ""; draw(); ctx.change(); const last = list.lastElementChild; last && last.scrollIntoView({ behavior: "smooth", block: "center" }); };
+        menu.append(b);
+      });
+      root.append(list, menu); draw(); return root;
+    }
     foot.onclick = () => { const n = sample(); arr.push(n); openSet.add(n); q = ""; draw(); ctx.change(); const last = list.lastElementChild; last && last.scrollIntoView({ behavior: "smooth", block: "center" }); };
     root.append(list, foot); draw(); return root;
   }
@@ -328,7 +373,7 @@
   }
   function overview() {
     const wrap = el("div"), cards = el("div", "cards-ov");
-    [["famille", "membres de la famille", (state.famille || []).length], ["relations", "relations", (state.relations || []).length], ["fils", "fils RP", (state.fils || []).length], ["galerie", "images", (state.galerie || []).length], ["caractere", "traits de caractère", (state.caractere.qualites || []).length + (state.caractere.defauts || []).length]]
+    [["famille", "membres de la famille", (state.famille || []).length], ["relations", "relations", (state.relations || []).length], ["fils", "fils RP", (state.fils || []).length], ["histoire", "chapitres d'histoire", (state.histoire || []).length], ["sante", "entrées de santé", (state.sante || []).length], ["galerie", "images", (state.galerie || []).length], ["caractere", "traits de caractère", (state.caractere.qualites || []).length + (state.caractere.defauts || []).length]]
       .forEach(([id, t, n]) => { const b = el("button", "ov", `<b>${n}</b><span>${t}</span>`); b.type = "button"; b.onclick = () => { tab = id; render(); }; cards.append(b); });
     wrap.append(cards);
     const tips = el("section", "panel", `<h3>Pour bien démarrer</h3><ul class="tips">

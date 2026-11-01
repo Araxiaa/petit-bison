@@ -123,10 +123,14 @@ window.DEFAULT_CONTENT = {
     { titre: "Mentorat", texte: "À voir dans une lune." },
   ],
 
+  // Chapitres de vie : de telle lune à telle lune. Chaque bloc a un type : paragraphe, intertitre, citation, encart, liste, image, separateur.
   histoire: [
-    "0 lune — Naissance.",
-    "5 lunes — Présent.",
+    { titre: "Naissance", lune_debut: 0, lune_fin: 0, accroche: "", blocs: [{ type: "paragraphe", texte: "Naissance." }] },
+    { titre: "Aujourd'hui", lune_debut: 5, lune_fin: 5, accroche: "", blocs: [{ type: "paragraphe", texte: "Présent." }] },
   ],
+
+  // Carnet de santé : maladies, blessures, convalescences. type : maladie, blessure, convalescence, autre.
+  sante: [],
 
   convictions: {
     clan: {

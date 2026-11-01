@@ -80,3 +80,5 @@ body.admin::before { display: none; }
   .side { position: sticky; top: 58px; z-index: 30; flex-direction: row; overflow-x: auto; max-height: none; padding: 6px; background: var(--bg); border-radius: 14px; } .side h4 { display: none; } .side button { flex: none; white-space: nowrap; }
   .item-h .bd { display: none; }
 }
+.addmenu { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; } .addmenu .add { width: auto; padding: 7px 14px; font-size: .85rem; }
+.hearts .hsep { color: var(--soft); align-self: center; opacity: .5; }

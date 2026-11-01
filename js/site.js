@@ -1,5 +1,5 @@
 (function () {
-  const C = window.SITE_CONFIG, O = window.Outils, L = window.Liens;
+  const C = window.SITE_CONFIG, O = window.Outils, L = window.Liens, R = window.Recits;
   const { esc, fmt, safeSrc, norm } = O;
   const $ = (s, r = document) => r.querySelector(s);
   const app = $("#app");
@@ -32,18 +32,24 @@
 
   /* ---------- éléments communs ---------- */
   const has = (v) => (isArr(v) ? v.length > 0 : !!v);
-  const quote = (q) => (q ? `<blockquote class="rv">« ${fmt(q)} »</blockquote>` : "");
+  const quote = (q) => (q ? `<blockquote class="rv">“${fmt(q)}”</blockquote>` : "");
   const paras = (arr) => (arr || []).filter(Boolean).map((p, i) => `<p class="rv" style="--i:${i}">${fmt(p)}</p>`).join("");
   const subh = (t) => `<h2 class="sub-h rv">${esc(t)}</h2>`;
   const empty = (t) => `<p class="empty rv">${esc(t)}</p>`;
-  const cards = (items, cls = "") =>
-    `<div class="grid ${cls}">${(items || []).map((i, n) => `<article class="card tilt rv" style="--i:${n % 6}"><h3>${esc(i.titre)}</h3><p>${fmt(i.texte)}</p></article>`).join("")}</div>`;
+  // Texte long : la première phrase devient un chapô, le reste se déplie.
+  const split = (t) => { const m = String(t || "").match(/^(.{20,260}?[.!?…])(\s+)([\s\S]+)$/); return m && t.length > 260 ? [m[1], m[3]] : [t, ""]; };
+  const words = (t) => String(t || "").split(/\s+/).filter(Boolean).length;
+  const ICO = { good: "🌿", flaw: "🔥" };
+  const cards = (items, cls = "", ico = "") =>
+    `<div class="grid ${cls}">${(items || []).map((i, n) => { const [a, b] = split(i.texte); return `<article class="card tilt rv" style="--i:${n % 6}">${ico || ICO[cls] ? `<span class="card-ico" aria-hidden="true">${ico || ICO[cls]}</span>` : ""}<h3>${esc(i.titre)}</h3><p class="chapo">${fmt(a)}</p>${b ? `<details><summary><span class="more-t">Lire la suite</span><span class="less-t">Replier</span></summary><p>${fmt(b)}</p></details>` : ""}</article>`; }).join("")}</div>`;
+  const readTime = (arr) => { const w = arr.reduce((a, x) => a + words(typeof x === "string" ? x : x.texte), 0); return w > 150 ? `<p class="read rv">≈ ${Math.max(1, Math.round(w / 200))} min de lecture</p>` : ""; };
   L.head = (kicker, h, sub = "") =>
     `<header class="page-head"><span class="kicker rv">${esc(kicker)}</span><h1 class="rv" style="--i:1">${esc(h)}</h1>${sub ? `<p class="lead rv" style="--i:2">${esc(sub)}</p>` : ""}</header>`;
   L.subTabs = () => "";
+  R.head = L.head;
 
   /* ---------- navigation ---------- */
-  const SUBS_ELLE = [["apercu", "Aperçu"], ["caractere", "Caractère"], ["gouts", "Goûts & habitudes"], ["physique", "Physique"], ["histoire", "Histoire"], ["convictions", "Convictions"]];
+  const SUBS_ELLE = [["apercu", "Aperçu"], ["caractere", "Caractère"], ["gouts", "Goûts & habitudes"], ["physique", "Physique"], ["sante", "Carnet de santé"], ["histoire", "Histoire"], ["convictions", "Convictions"]];
   const SUBS_ENT = [["famille", "Famille"], ["relations", "Relations"]];
   const NAV = [
     { id: "", label: "Accueil", href: "#/" },
@@ -76,10 +82,10 @@
     const people = L.all();
     const nFils = (D.fils || []).length;
     const portals = [
-      ["#/elle/apercu", "Elle", "Caractère, goûts, physique, histoire et convictions de la petite tornade de l'Ombre.", "✦", `${SUBS_ELLE.length} rubriques`],
-      ["#/entourage/famille", "Entourage", "Sa famille et ses relations : photos, avis datés, tableau et constellation.", "♥", `${people.length} liens`],
-      ["#/fils", "Fils RP", "Toutes ses scènes, avec le lien direct vers le fil Discord.", "✎", `${nFils} fil${nFils > 1 ? "s" : ""}`],
-      ["#/galerie", "Galerie", "Illustrations et pixel-art de Petit Bison.", "❀", `${D.galerie.length} images`],
+      ["#/elle/apercu", "Elle", "Caractère, goûts, physique, histoire et convictions de la petite tornade de l'Ombre.", "🌿", `${SUBS_ELLE.length} rubriques`],
+      ["#/entourage/famille", "Entourage", "Sa famille et ses relations : photos, avis datés, tableau et constellation.", "🐸", `${people.length} liens`],
+      ["#/fils", "Fils RP", "Toutes ses scènes, avec le lien direct vers le fil Discord.", "💬", `${nFils} fil${nFils > 1 ? "s" : ""}`],
+      ["#/galerie", "Galerie", "Illustrations et pixel-art de Petit Bison.", "🖼️", `${D.galerie.length} images`],
     ];
     const q = D.caractere.qualites || [], d = D.caractere.defauts || [];
     const fils = (D.fils || []).slice(0, 3);
@@ -150,6 +156,8 @@
   function pagePerso(sub) {
     sub = SUBS_ELLE.some((s) => s[0] === sub) ? sub : "apercu";
     const i = D.identite;
+    if (sub === "sante") return R.pageSante();
+    if (sub === "histoire") return R.pageHistoire();
     let body = "";
     if (sub === "apercu") {
       const facts = [["Lunes", i.lunes], ["Clan", i.clan], ["Rang", i.rang], ["Sexe", i.sexe + (i.note_sexe ? " · " + i.note_sexe : "")], ["Orientation", i.orientation], ["Taille", i.taille], ["Poids", i.poids], ["Joueur·se", i.pseudo_joueur]].filter((f) => f[1]);
@@ -158,18 +166,16 @@
         <ol class="names">${(D.noms || []).map((n, k) => `<li class="tilt rv" style="--i:${k}"><span class="step">${esc(n.etape)}</span><strong>${esc(n.nom)}</strong>${n.texte ? `<p>${fmt(n.texte)}</p>` : ""}</li>`).join("")}</ol>`;
     } else if (sub === "caractere") {
       const c = D.caractere;
-      body = `<div class="prose">${paras(c.description)}</div>${subh("Qualités")}${cards(c.qualites, "good")}${subh("Défauts")}${cards(c.defauts, "flaw")}`;
+      body = `${readTime(c.description)}<div class="prose">${paras(c.description)}</div>${subh("Qualités")}${cards(c.qualites, "good")}${subh("Défauts")}${cards(c.defauts, "flaw")}`;
     } else if (sub === "gouts") {
       const g = D.gouts;
-      body = `${subh("Ce qu'elle aime")}${cards(g.aime, "good")}${subh("Ce qu'elle déteste")}${cards(g.deteste, "flaw")}${subh("Ses peurs")}${cards(g.peurs)}${subh("Ses habitudes")}${cards(g.habitudes, "good")}`;
+      body = `${subh("Ce qu'elle aime")}${cards(g.aime, "good", "🐸")}${subh("Ce qu'elle déteste")}${cards(g.deteste, "flaw", "🐿️")}${subh("Ses peurs")}${cards(g.peurs, "", "🌫️")}${subh("Ses habitudes")}${cards(g.habitudes, "good", "🐾")}`;
     } else if (sub === "physique") {
       const p = D.physique, h = p.handicap || {}, a = p.accessoires || {};
-      body = `<div class="prose">${paras(p.description)}</div>${subh("Points forts")}${cards(p.forts, "good")}${subh("Points faibles")}${cards(p.faibles, "flaw")}
+      body = `${readTime(p.description)}<div class="prose">${paras(p.description)}</div>${subh("Points forts")}${cards(p.forts, "good")}${subh("Points faibles")}${cards(p.faibles, "flaw")}
         ${has(h.points) || h.intro ? subh("Handicap") + quote(h.citation) + (h.intro ? `<p class="rv">${fmt(h.intro)}</p>` : "") + `<ul class="list">${(h.points || []).map((x) => `<li class="rv">${fmt(x)}</li>`).join("")}</ul>` : ""}
         ${has(a.points) ? subh("Accessoires") + quote(a.citation) + cards(a.points) : ""}
         ${has(p.cicatrices) ? subh("Cicatrices") + `<div class="prose">${paras(p.cicatrices)}</div>` : ""}`;
-    } else if (sub === "histoire") {
-      body = `<ol class="timeline">${(D.histoire || []).map((t, n) => `<li class="rv"><span class="dot">${n + 1}</span><p>${fmt(t)}</p></li>`).join("")}</ol>`;
     } else {
       const v = D.convictions, cl = v.clan || {}, ac = v.autres_clans || {}, et = v.etoiles || {};
       body = `${subh("Relation au clan")}${quote(cl.citation)}<div class="prose">${paras(cl.paragraphes)}</div>
@@ -220,6 +226,9 @@
     const addT = (arr, sub, k) => (arr || []).forEach((x) => x.titre && t.push({ t: x.titre, k, h: `#/elle/${sub}` }));
     addT(D.caractere.qualites, "caractere", "Qualité"); addT(D.caractere.defauts, "caractere", "Défaut");
     ["aime", "deteste", "peurs", "habitudes"].forEach((g) => addT(D.gouts[g], "gouts", "Goûts"));
+    t.push({ t: "Carnet de santé", k: "Elle", h: "#/elle/sante" });
+    (D.sante || []).forEach((e) => e.titre && t.push({ t: e.titre, k: "Santé", h: "#/elle/sante" }));
+    (D.histoire || []).forEach((c) => c.titre && t.push({ t: c.titre, k: "Histoire · " + (c.lune_debut ?? ""), h: "#/elle/histoire" }));
     addT(D.physique.forts, "physique", "Point fort"); addT(D.physique.faibles, "physique", "Point faible");
     (D.famille || []).forEach((r) => t.push({ t: r.nom, k: "Famille · " + r.lien, h: L.href(r) }));
     (D.relations || []).forEach((r) => t.push({ t: r.nom, k: "Relation · " + r.lien, h: L.href(r) }));
@@ -280,10 +289,20 @@
     if (!silent) app.classList.add("enter");
     document.body.dataset.page = r || "home";
     document.body.classList.remove("menu-open"); $("#burger").setAttribute("aria-expanded", "false");
-    markNav(r === "accueil" ? "" : r, sub); silent ? scrollTo(0, y) : scrollTo(0, 0); after(); FX.observe(app);
+    markNav(r === "accueil" ? "" : r, sub); silent ? scrollTo(0, y) : scrollTo(0, 0); after(); buildToc(); FX.observe(app);
     if (!silent) setTimeout(() => app.classList.remove("enter"), 700);
     const names = { elle: "Elle", entourage: "Entourage", fils: "Fils RP", galerie: "Galerie" };
     document.title = (names[r] ? names[r] + " — " : "") + D.identite.nom;
+  }
+
+  // « Sur cette page » : puces vers les intertitres des pages longues
+  function buildToc() {
+    const hs = [...app.querySelectorAll(".sub-h")], head = app.querySelector(".page-head");
+    if (hs.length < 3 || !head) return;
+    hs.forEach((h, i) => (h.id = "s-" + i));
+    const nav = document.createElement("nav"); nav.className = "toc rv"; nav.setAttribute("aria-label", "Sur cette page");
+    nav.innerHTML = "<span>Sur cette page</span>" + hs.map((h, i) => `<a href="${esc(location.hash || "#/")}" data-go="s-${i}">${esc(h.textContent)}</a>`).join("");
+    head.after(nav);
   }
 
   function bindHome() {
@@ -305,6 +324,10 @@
     if (row && !e.target.closest("a")) { location.hash = row.dataset.href; return; }
     const fs = e.target.closest("[data-s]");
     if (fs) { e.preventDefault(); L.filState.s = fs.dataset.s; route(true); return; }
+    const go = e.target.closest("[data-go]");
+    if (go) { e.preventDefault(); const t = document.getElementById(go.dataset.go); if (t) { t.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }); t.classList.remove("flash"); void t.offsetWidth; t.classList.add("flash"); } return; }
+    const hc = e.target.closest("[data-care]");
+    if (hc) { e.preventDefault(); R.filter.t = hc.dataset.care; route(true); return; }
     const gc = e.target.closest("[data-c]");
     if (gc) { e.preventDefault(); galS.c = gc.dataset.c; route(true); }
   });
@@ -317,16 +340,21 @@
   const setTheme = (t) => { document.documentElement.dataset.theme = t; themeBtn.textContent = t === "night" ? "☀" : "☾"; try { localStorage.setItem("pb-theme", t); } catch (e) {} };
   setTheme(document.documentElement.dataset.theme === "night" ? "night" : "day");
   themeBtn.addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "night" ? "day" : "night"));
+  // taille du texte (A / A+ / A++)
+  const FS = [1, 1.12, 1.25]; let fi = 0;
+  try { fi = Math.min(2, Number(localStorage.getItem("pb-fs")) || 0); } catch (e) {}
+  const setFs = () => { document.documentElement.style.setProperty("--fs", FS[fi]); $("#fontsize").textContent = ["Aa", "Aa+", "Aa++"][fi]; try { localStorage.setItem("pb-fs", fi); } catch (e) {} };
+  $("#fontsize").addEventListener("click", () => { fi = (fi + 1) % 3; setFs(); }); setFs();
   addEventListener("scroll", () => $("#nav").classList.toggle("stuck", scrollY > 20), { passive: true });
   addEventListener("hashchange", () => route());
 
   function apply(d) {
-    D = d; L.D = d;
-    const R = D.reglages || {};
+    D = d; L.D = d; R.D = d;
+    const RG = D.reglages || {};
     $("#credits").textContent = D.identite.credits || "";
-    $("#foot-text").textContent = R.texte_pied || "Personnage créé par";
+    $("#foot-text").textContent = RG.texte_pied || "Personnage créé par";
     document.querySelectorAll(".brand-name").forEach((b) => (b.textContent = D.identite.nom));
-    FX.mascot({ marche: safeSrc(R.sprite_marche), assis: safeSrc(R.sprite_assis), regard: safeSrc(R.sprite_regard) }, R.mascotte !== "non" && R.mascotte !== false);
+    FX.mascot({ marche: safeSrc(RG.sprite_marche), assis: safeSrc(RG.sprite_assis), regard: safeSrc(RG.sprite_regard) }, RG.mascotte !== "non" && RG.mascotte !== false);
   }
   buildNav();
   const c0 = cached();

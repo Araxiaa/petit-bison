@@ -31,7 +31,26 @@ window.Outils = (function () {
       if (!s.famille) delete s.famille;
     }
     ["famille", "relations"].forEach((k) => { if (Array.isArray(s[k])) s[k] = s[k].map((r) => (r.groupe === undefined || r.vivant === undefined ? up(r) : r)); });
+    // « respect » n'est plus un cran de l'échelle : c'est une nuance en plus (respect: "oui") sur un avis.
+    ["famille", "relations"].forEach((k) => { if (Array.isArray(s[k])) s[k] = s[k].map((r) => Object.assign({}, r, { phases: (r.phases || []).map((p) => (p.appreciation === "respect" ? Object.assign({}, p, { appreciation: "neutre", respect: "oui" }) : p)) })); });
+    // Ancienne histoire : une liste de phrases « 0 lune — Naissance. » devient une liste de chapitres.
+    if (Array.isArray(s.histoire) && s.histoire.length && typeof s.histoire[0] === "string") {
+      s.histoire = s.histoire.map((t) => { const m = String(t).match(/^\s*(\d+)\s*lunes?\s*[—:\-–]\s*(.*)$/); const n = m ? Number(m[1]) : 0, txt = m ? m[2] : String(t); return { titre: txt.replace(/[.\s]+$/, "").slice(0, 60) || "Chapitre", lune_debut: n, lune_fin: n, accroche: "", blocs: [{ type: "paragraphe", texte: txt }] }; });
+    }
     return s;
   }
-  return { migrate, esc, fmt, safeSrc, safeLink, norm, slug, initials, hue };
+  // Échelle des avis, aux couleurs de Petit Bison : 🐸 (sa proie préférée) pour ce qu'elle aime, 🐿️ (l'écureuil, qu'elle déteste) pour l'aversion,
+  // 🌫️ (la brume) pour le « ni l'un ni l'autre », ✨ pour les étoiles. Le respect (🦬) est une nuance en plus, ajoutable à n'importe quel avis.
+  const POS = "🐸", NEG = "🐿️", FOG = "🌫️", BISON = "🦬";
+  const APP = {
+    pos1: { g: "pos", n: 1, glyph: POS, label: "Plutôt sympa" },
+    pos2: { g: "pos", n: 2, glyph: POS + POS, label: "Bon·ne ami·e" },
+    pos3: { g: "pos", n: 3, glyph: POS + POS + POS, label: "Coup de cœur" },
+    neg1: { g: "neg", n: -1, glyph: NEG, label: "Bof" },
+    neg2: { g: "neg", n: -2, glyph: NEG + NEG, label: "Pas fan" },
+    neg3: { g: "neg", n: -3, glyph: NEG + NEG + NEG, label: "Beurk !" },
+    neutre: { g: "neutre", n: 0, glyph: FOG, label: "Dans la brume" },
+    mort: { g: "mort", n: null, glyph: "✨", label: "Aux étoiles" },
+  };
+  return { APP, BISON, migrate, esc, fmt, safeSrc, safeLink, norm, slug, initials, hue };
 })();

@@ -5,20 +5,11 @@ window.Liens = (function () {
   const isArr = Array.isArray;
 
   /* ---------- appréciations ---------- */
-  const HR = '<b class="h r">♥</b>', HG = '<b class="h g">♥</b>';
-  const APP = {
-    pos1: { g: "pos", n: 1, label: "Appréciation (1)", html: HR },
-    pos2: { g: "pos", n: 2, label: "Appréciation (2)", html: HR + HR },
-    pos3: { g: "pos", n: 3, label: "Appréciation (3)", html: HR + HR + HR },
-    neg1: { g: "neg", n: -1, label: "Aversion (1)", html: HG },
-    neg2: { g: "neg", n: -2, label: "Aversion (2)", html: HG + HG },
-    neg3: { g: "neg", n: -3, label: "Aversion (3)", html: HG + HG + HG },
-    neutre: { g: "neutre", n: 0, label: "Neutre", html: HR + HG },
-    respect: { g: "respect", n: 2, label: "Respect", html: '<b class="h s">★</b>' },
-    mort: { g: "mort", n: null, label: "Décédé(e)", html: '<b class="h d">🕊</b>' },
-  };
-  const appr = (k) => APP[k] || APP.neutre;
-  const badge = (k) => `<span class="appr appr-${appr(k).g}" title="${esc(appr(k).label)}">${appr(k).html}</span>`;
+  const APP = O.APP;
+  const appr = (k) => (k === "respect" ? APP.neutre : APP[k] || APP.neutre);
+  const resp = (p) => !!p && (p.respect === "oui" || p.appreciation === "respect");
+  const badge = (k, rs) => `<span class="appr appr-${appr(k).g}" title="${esc(appr(k).label)}${rs ? " · respect de bison" : ""}"><b class="h">${appr(k).glyph}</b>${rs ? `<b class="h s" title="Respect de bison">${O.BISON}</b>` : ""}</span>`;
+  const badgeP = (p) => badge(p.appreciation, resp(p));
   const phasesOf = (r) => [...(r.phases || [])].sort((a, b) => (Number(a.age) || 0) - (Number(b.age) || 0));
   const latest = (r) => { const p = phasesOf(r); return p[p.length - 1] || { age: "", appreciation: "neutre", description: "" }; };
   const dead = (r) => r.vivant === "non" || latest(r).appreciation === "mort";
@@ -54,7 +45,7 @@ window.Liens = (function () {
       if (S.groupe && r.groupe !== S.groupe) return false;
       if (S.type && (r.type || "PNJ") !== S.type) return false;
       if (S.vivant && (S.vivant === "non") !== dead(r)) return false;
-      if (S.grp && appr(latest(r).appreciation).g !== S.grp) return false;
+      if (S.grp === "respect" ? !resp(latest(r)) : S.grp && appr(latest(r).appreciation).g !== S.grp) return false;
       return !q || O.norm([r.nom, r.lien, r.groupe, r.rang, r.joueur].join(" ")).includes(q);
     });
   }
@@ -66,10 +57,10 @@ window.Liens = (function () {
       ${sel("rc", groups.map((c) => [c, c]), S.groupe, "Tous clans / groupes")}
       ${sel("rt", [["PNJ", "PNJ"], ["PJ", "PJ (joueur·se)"]], S.type, "PNJ & PJ")}
       ${sel("rv", [["oui", "Vivant·e·s"], ["non", "Décédé·e·s"]], S.vivant, "Vivant·e ou non")}
-      ${sel("rg", [["pos", "Appréciation positive"], ["neg", "Aversion"], ["neutre", "Neutre"], ["respect", "Respect"]], S.grp, "Tous les avis")}
+      ${sel("rg", [["pos", "🐸 Apprécié·e·s"], ["neg", "🐿️ Aversion"], ["neutre", "🌫️ Dans la brume"], ["respect", "🦬 Respect de bison"]], S.grp, "Tous les avis")}
     </div>`;
   }
-  const legend = () => `<div class="legend rv">${[["pos3", "Appréciation"], ["neg3", "Aversion"], ["neutre", "Neutre"], ["respect", "Respect"]].map((l) => `<span class="lg">${APP[l[0]].html}<em>${l[1]}</em></span>`).join("")}<span class="lg"><b class="h d">🕊</b><em>Décédé·e</em></span></div>`;
+  const legend = () => `<div class="legend rv">${[["pos3", "Apprécié·e (1 à 3 grenouilles)"], ["neg3", "Aversion (1 à 3 écureuils)"], ["neutre", "Dans la brume : pas d'avis tranché"]].map((l) => `<span class="lg"><b class="h">${APP[l[0]].glyph}</b><em>${l[2] || l[1]}</em></span>`).join("")}<span class="lg"><b class="h">${O.BISON}</b><em>Respect de bison (en plus)</em></span><span class="lg"><b class="h">✨</b><em>Aux étoiles</em></span></div>`;
 
   /* ---------- cartes ---------- */
   function polaroid(r, n = 0) {
@@ -77,7 +68,7 @@ window.Liens = (function () {
     return `<a class="polaroid tilt rv${dead(r) ? " is-dead" : ""}" style="--i:${n % 8};--r:${((n * 37) % 5) - 2}deg" href="${href(r)}">
       <span class="tape"></span>${avatar(r, "ph")}
       <div class="pol-body"><h3>${esc(r.nom)}</h3><p class="muted">${esc(r.lien)}${r.groupe ? " · " + esc(r.groupe) : ""}</p>
-      <div class="rel-foot">${badge(l.appreciation)}<span class="trend ${t.cls}" title="${t.txt}">${t.sym}</span>${typeTag(r)}${dead(r) ? '<span class="tag dead">🕊</span>' : ""}</div></div></a>`;
+      <div class="rel-foot">${badgeP(l)}<span class="trend ${t.cls}" title="${t.txt}">${t.sym}</span>${typeTag(r)}${dead(r) ? '<span class="tag dead">🕊</span>' : ""}</div></div></a>`;
   }
   const cartes = (list) => (list.length ? `<div class="polas">${list.map(polaroid).join("")}</div>` : `<p class="empty rv">Aucune relation ne correspond.</p>`);
 
@@ -97,7 +88,7 @@ window.Liens = (function () {
       ${rows.map((r) => { const l = latest(r), t = trend(r); return `<tr data-href="${href(r)}" class="${dead(r) ? "is-dead" : ""}">
         <td>${avatar(r, "sm")}</td><td><a href="${href(r)}"><strong>${esc(r.nom)}</strong></a>${r._fam ? ' <span class="tag soft">famille</span>' : ""}</td><td>${esc(r.lien)}</td><td>${esc(r.groupe || "—")}${r.rang ? `<small> · ${esc(r.rang)}</small>` : ""}</td>
         <td>${typeTag(r)}${r.type === "PJ" && r.joueur ? `<small> ${esc(r.joueur)}</small>` : ""}</td><td>${lifeTag(r)}</td>
-        <td>${badge(l.appreciation)}</td><td><span class="trend ${t.cls}" title="${t.txt}">${t.sym}</span></td><td>${l.age !== "" ? esc(l.age) + " l." : "—"}</td></tr>`; }).join("")}</tbody></table></div>`;
+        <td>${badgeP(l)}</td><td><span class="trend ${t.cls}" title="${t.txt}">${t.sym}</span></td><td>${l.age !== "" ? esc(l.age) + " l." : "—"}</td></tr>`; }).join("")}</tbody></table></div>`;
   }
 
   /* ---------- évolution : courbes + frise de chaleur ---------- */
@@ -110,7 +101,7 @@ window.Liens = (function () {
     return d + `L${X(end)},${Y(pts[pts.length - 1].n)}`;
   }
   function courbes(list, id = "all") {
-    const withPts = list.map((r) => ({ r, pts: phasesOf(r).filter((p) => appr(p.appreciation).n !== null).map((p) => ({ a: Number(p.age) || 0, n: appr(p.appreciation).n })) })).filter((x) => x.pts.length);
+    const withPts = list.map((r) => ({ r, pts: phasesOf(r).filter((p) => appr(p.appreciation).n !== null).map((p) => ({ a: Number(p.age) || 0, n: appr(p.appreciation).n, rs: resp(p) })) })).filter((x) => x.pts.length);
     if (!withPts.length) return `<p class="empty rv">Pas encore assez d'avis datés pour tracer une courbe.</p>`;
     const ages = withPts.flatMap((x) => x.pts.map((p) => p.a));
     const a0 = Math.min(...ages), end = Math.max(nowMoon(), ...ages), span = end - a0 || 1;
@@ -120,10 +111,10 @@ window.Liens = (function () {
     for (let a = a0; a <= end; a += step) ticks.push(a);
     return `<div class="chart rv" data-chart="${id}">
       <svg viewBox="0 0 ${Wd} ${Ht}" role="img" aria-label="Évolution de l'avis de Petit Bison sur chaque relation">
-        ${[3, 2, 1, 0, -1, -2, -3].map((n) => `<line x1="52" x2="${Wd - 30}" y1="${Y(n)}" y2="${Y(n)}" class="${n === 0 ? "zero" : "grid"}"/><text x="44" y="${Y(n) + 4}" text-anchor="end" class="lab">${n > 0 ? "♥".repeat(Math.min(n, 3)) : n < 0 ? "🩶".repeat(Math.min(-n, 1)) + (n < -1 ? n : "") : "·"}</text>`).join("")}
+        ${[3, 2, 1, 0, -1, -2, -3].map((n) => `<line x1="52" x2="${Wd - 30}" y1="${Y(n)}" y2="${Y(n)}" class="${n === 0 ? "zero" : "grid"}"/><text x="44" y="${Y(n) + 4}" text-anchor="end" class="lab">${n > 0 ? "🐸".repeat(n) : n < 0 ? "🐿️".repeat(-n) : "🌫️"}</text>`).join("")}
         ${ticks.map((a) => `<text x="${X(a)}" y="${Ht - 12}" text-anchor="middle" class="lab">${a} l.</text>`).join("")}
         ${nowMoon() >= a0 ? `<line x1="${X(nowMoon())}" x2="${X(nowMoon())}" y1="20" y2="${Ht - 34}" class="now"/><text x="${X(nowMoon())}" y="14" text-anchor="middle" class="lab now-l">présent</text>` : ""}
-        ${withPts.map((x, i) => `<g class="ln" data-k="${i}" style="--c:${rcolor(x.r)}"><path d="${stepPath(x.pts, X, Y, end)}" class="curve${dead(x.r) ? " dashed" : ""}"/>${x.pts.map((p) => `<circle cx="${X(p.a)}" cy="${Y(p.n)}" r="5"><title>${esc(x.r.nom)} — ${p.a} lunes</title></circle>`).join("")}</g>`).join("")}
+        ${withPts.map((x, i) => `<g class="ln" data-k="${i}" style="--c:${rcolor(x.r)}"><path d="${stepPath(x.pts, X, Y, end)}" class="curve${dead(x.r) ? " dashed" : ""}"/>${x.pts.map((p) => `<circle cx="${X(p.a)}" cy="${Y(p.n)}" r="${p.rs ? 7 : 5}"${p.rs ? ' class="rs"' : ""}><title>${esc(x.r.nom)} — ${p.a} lunes</title></circle>`).join("")}</g>`).join("")}
       </svg>
       <div class="chips key">${withPts.map((x, i) => `<button type="button" class="key-i on" data-k="${i}" style="--c:${rcolor(x.r)}"><i></i>${esc(x.r.nom)}</button>`).join("")}</div></div>`;
   }
@@ -133,7 +124,7 @@ window.Liens = (function () {
     const ages = [...new Set(rows.flatMap((r) => r.phases.map((p) => Number(p.age) || 0)))].sort((a, b) => a - b);
     const at = (r, a) => { let cur = null; phasesOf(r).forEach((p) => { if ((Number(p.age) || 0) <= a) cur = p; }); return cur; };
     return `<div class="tablewrap rv"><table class="heat"><thead><tr><th>Relation</th>${ages.map((a) => `<th>${a} l.</th>`).join("")}</tr></thead><tbody>
-      ${rows.map((r) => `<tr><th scope="row"><a href="${href(r)}">${esc(r.nom)}</a></th>${ages.map((a) => { const p = at(r, a); if (!p) return "<td></td>"; const k = appr(p.appreciation); return `<td class="hc hc-${k.g}" style="--n:${Math.abs(k.n || 0)}" title="${esc(r.nom)} · ${a} lunes · ${esc(k.label)}${p.description ? " — " + esc(p.description) : ""}">${k.n === null ? "🕊" : k.g === "respect" ? "★" : k.n > 0 ? "♥".repeat(k.n) : k.n < 0 ? "🩶".repeat(-k.n) : "·"}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
+      ${rows.map((r) => `<tr><th scope="row"><a href="${href(r)}">${esc(r.nom)}</a></th>${ages.map((a) => { const p = at(r, a); if (!p) return "<td></td>"; const k = appr(p.appreciation); return `<td class="hc hc-${k.g}${resp(p) ? " hc-rs" : ""}" style="--n:${Math.abs(k.n || 0)}" title="${esc(r.nom)} · ${a} lunes · ${esc(k.label)}${p.description ? " — " + esc(p.description) : ""}">${k.glyph}${resp(p) ? O.BISON : ""}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>`;
   }
   const evolution = (list) => `<h2 class="sub-h rv">Courbes de toutes les relations</h2>${courbes(list)}<h2 class="sub-h rv">Frise des avis, lune après lune</h2>${heat(list)}`;
 
@@ -143,12 +134,12 @@ window.Liens = (function () {
     const W = 880, H = 640, cx = W / 2, cy = H / 2;
     const sorted = [...list].sort((a, b) => O.norm(a.groupe).localeCompare(O.norm(b.groupe)) || O.norm(a.nom).localeCompare(O.norm(b.nom)));
     const n = sorted.length;
-    const col = { pos: "var(--eye)", neg: "#8a97a3", neutre: "var(--taupe)", respect: "var(--orange)", mort: "var(--taupe)" };
+    const col = { pos: "var(--eye)", neg: "#8a97a3", neutre: "var(--taupe)", mort: "var(--taupe)" };
     const rings = [0, 0.5, 1].map((s) => 270 - s * 150);
     const nodes = sorted.map((r, i) => {
       const l = latest(r), k = appr(l.appreciation), a = -Math.PI / 2 + (i / n) * Math.PI * 2;
       const s = (num(l.appreciation) + 3) / 6, rad = 275 - s * 150, x = cx + rad * 1.42 * Math.cos(a), y = cy + rad * Math.sin(a);
-      const sz = 24 + Math.abs(num(l.appreciation)) * 3, src = O.safeSrc(r.image), c = col[k.g] || col.neutre;
+      const sz = 24 + Math.abs(num(l.appreciation)) * 3, src = O.safeSrc(r.image), c = resp(l) ? "var(--orange)" : col[k.g] || col.neutre;
       return `<a href="${href(r)}" class="cn${dead(r) ? " is-dead" : ""}" style="--d:${(i * 0.37).toFixed(2)}s"><line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="ray"/>
         <g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g class="bob"><circle r="${sz + 4}" fill="none" stroke="${c}" stroke-width="3" ${dead(r) ? 'stroke-dasharray="4 4"' : ""} class="ring"/>
         <clipPath id="cp${i}"><circle r="${sz}"/></clipPath>
@@ -163,7 +154,7 @@ window.Liens = (function () {
       <g class="me"><circle cx="${cx}" cy="${cy}" r="56" class="me-halo"/><clipPath id="cpme"><circle cx="${cx}" cy="${cy}" r="48"/></clipPath>
       <image href="assets/bison-assis.webp" x="${cx - 64}" y="${cy - 52}" width="128" height="80" clip-path="url(#cpme)" preserveAspectRatio="xMidYMin slice"/>
       <text x="${cx}" y="${cy + 78}" text-anchor="middle" class="nm me-nm">${esc(L.D.identite.nom)}</text></g></svg>
-      <p class="muted center">Plus le lien est fort, plus la bulle est proche de Petit Bison. Vert : apprécié·e · gris : aversion · gold : respect · pointillés : décédé·e.</p></div>`;
+      <p class="muted center">Plus le lien est fort, plus la bulle est proche de Petit Bison. Vert : apprécié·e (🐸) · gris : aversion (🐿️) · brun-doré : respect de bison (🦬) · brume : pas d'avis tranché · pointillés : décédé·e.</p></div>`;
   }
 
   /* ---------- pages ---------- */
@@ -197,7 +188,7 @@ window.Liens = (function () {
     const fam = L.D.famille || [];
     const by = (p) => fam.filter((r) => (r.place || guess(r)) === p);
     function guess(r) { const l = O.norm(r.lien); return /(mere|pere|baba|papa|maman|parent|grand|oncle|tante)/.test(l) ? "ascendant" : /(frere|soeur|fratrie|jumeau|jumelle)/.test(l) ? "fratrie" : /(fils|fille|enfant|petit-)/.test(l) ? "descendant" : "autre"; }
-    const node = (r, n) => `<a class="fnode tilt rv${dead(r) ? " is-dead" : ""}" style="--i:${n}" href="${href(r)}">${avatar(r, "md")}<strong>${esc(r.nom)}</strong><span class="muted">${esc(r.lien)}</span><span class="rel-foot">${badge(latest(r).appreciation)}${dead(r) ? '<span class="tag dead">🕊</span>' : ""}</span></a>`;
+    const node = (r, n) => `<a class="fnode tilt rv${dead(r) ? " is-dead" : ""}" style="--i:${n}" href="${href(r)}">${avatar(r, "md")}<strong>${esc(r.nom)}</strong><span class="muted">${esc(r.lien)}</span><span class="rel-foot">${badgeP(latest(r))}${dead(r) ? '<span class="tag dead">🕊</span>' : ""}</span></a>`;
     const row = (title, arr) => (arr.length ? `<div class="tier"><h3 class="tier-t rv">${title}</h3><div class="tier-row">${arr.map(node).join("")}</div></div>` : "");
     const me = `<div class="fnode me tilt rv"><span class="avatar md"><img src="assets/sprite-regard.png" alt="" class="px"></span><strong>${esc(L.D.identite.nom)}</strong><span class="muted">${esc(L.D.identite.lunes)}</span></div>`;
     const infos = (L.D.famille_infos || []).filter((i) => i.titre);
@@ -219,13 +210,13 @@ window.Liens = (function () {
         <figure class="big-pola ${dead(r) ? "is-dead" : ""}"><span class="tape"></span>${src ? `<button type="button" class="zoom" data-zoom="${esc(src)}" data-cap="${esc(r.nom)}" aria-label="Agrandir la photo de ${esc(r.nom)}">${avatar(r, "xl")}</button>` : avatar(r, "xl")}<figcaption>${esc(r.nom)}</figcaption></figure>
         <div class="fiche-txt"><span class="kicker">${esc(r.lien)}</span><h1>${esc(r.nom)}</h1>
           <div class="chips">${lifeTag(r)}${typeTag(r)}${r.type === "PJ" && r.joueur ? `<span class="tag soft">Joué·e par ${esc(r.joueur)}</span>` : ""}${r.groupe ? `<span class="tag soft">${esc(r.groupe)}</span>` : ""}${r.rang ? `<span class="tag soft">${esc(r.rang)}</span>` : ""}</div>
-          <div class="avis-now"><span>Avis actuel</span>${badge(l.appreciation)}<em>${esc(appr(l.appreciation).label)}</em><span class="trend ${t.cls}" title="${t.txt}">${t.sym} ${t.txt}</span></div>
+          <div class="avis-now"><span>Avis actuel</span>${badgeP(l)}<em>${esc(appr(l.appreciation).label)}${resp(l) ? " · respect de bison" : ""}</em><span class="trend ${t.cls}" title="${t.txt}">${t.sym} ${t.txt}</span></div>
           ${r.notes ? `<p class="notes">${fmt(r.notes)}</p>` : ""}</div>
       </header>
       <h2 class="sub-h rv">Évolution de l'avis</h2>
       ${ph.length > 1 ? courbes([r], "one") : `<p class="muted rv">Un seul avis pour l'instant : la courbe apparaîtra dès qu'il y en aura plusieurs.</p>`}
       <ol class="timeline phases">${ph.map((p) => `<li class="rv"><span class="dot age">${esc(p.age)}<small>lunes</small></span>
-        <div class="phase tilt"><div class="phase-top">${badge(p.appreciation)}<span class="muted">${esc(appr(p.appreciation).label)}</span></div><p>${fmt(p.description)}</p></div></li>`).join("")}</ol>
+        <div class="phase tilt"><div class="phase-top">${badgeP(p)}<span class="muted">${esc(appr(p.appreciation).label)}${resp(p) ? " · respect de bison" : ""}</span></div><p>${fmt(p.description)}</p></div></li>`).join("")}</ol>
       ${fils.length ? `<h2 class="sub-h rv">Fils RP ensemble</h2><div class="grid fils">${fils.map(filCard).join("")}</div>` : ""}
     </section>`;
   };
@@ -270,6 +261,6 @@ window.Liens = (function () {
     }));
   };
 
-  L.badge = badge; L.avatar = avatar; L.all = all; L.latest = latest; L.dead = dead; L.href = href; L.filCard = filCard; L.polaroid = polaroid; L.appr = appr;
+  L.badge = badge; L.avatar = avatar; L.all = all; L.latest = latest; L.dead = dead; L.href = href; L.filCard = filCard; L.polaroid = polaroid; L.appr = appr; L.badgeP = badgeP;
   return L;
 })();
