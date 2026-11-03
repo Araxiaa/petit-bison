@@ -42,8 +42,9 @@
       F.text("joueur", "Pseudo du / de la joueur·se", { show: (it) => it.type === "PJ", ph: "Pseudo Discord" }),
     ], { bare: true, cols: true }),
     ...(fam ? [F.sel("place", "Place dans l'arbre", [["", "Automatique (selon le lien)"], ["ascendant", "Parents & ascendants"], ["fratrie", "Fratrie"], ["descendant", "Descendance"], ["autre", "Autres liens de famille"]])] : []),
-    F.yes("vivant", "Vivant·e", { refresh: true, offLabel: "Décédé·e 🕊" }),
-    F.img("image", "Photo", { hint: "visible sur la fiche, en carte et dans la constellation" }),
+    F.yes("vivant", "Vivant·e", { refresh: true, offLabel: "Décédé·e ✨" }),
+    F.num("deces", "Lune du décès (optionnel)", { show: (it) => it.vivant === "non", hint: "le nénuphar passe « aux étoiles » à cette lune" }),
+    F.img("image", "Photo", { hint: "visible sur la fiche, en polaroïd et sur son nénuphar du Marais" }),
     F.area("notes", "Notes", { hint: "affichées sur la fiche (optionnel)", rows: 3 }),
     F.items("phases", "Évolution de l'avis (avis datés)", [
       F.group("", "", [F.num("age", "À la lune n°"), F.hearts("appreciation", "Avis de Petit Bison", { hint: "🐸 elle aime · 🐿️ elle n'aime pas · 🌫️ pas d'avis tranché" })], { bare: true, cols: true }),
@@ -123,7 +124,7 @@
     ] },
     { g: "Entourage", list: [
       { id: "famille", ic: "🏡", label: "Famille", help: "Parents, fratrie… Chaque membre a une photo, un statut (vivant·e ou non) et des avis datés. Ils forment l'arbre de la page Famille.", defs: [F.items("famille", "Membres de la famille", relFields(true), { sum: sumRel, addLabel: "+ Ajouter un membre de la famille", search: true, sample: () => ({ nom: "", lien: "", place: "", groupe: "Clan de l'Ombre", rang: "", type: "PNJ", joueur: "", vivant: "oui", image: "", notes: "", phases: [{ age: parseInt(state.identite.lunes) || 0, appreciation: "pos2", description: "" }] }) }), textCards("famille_infos", "Lignée, conjoint·e, descendance, mentorat…", { addLabel: "+ Ajouter une info" })] },
-      { id: "relations", ic: "💞", label: "Relations", help: "Tous les autres chats : amis, rivaux, mentors… Pour faire évoluer un lien, ouvre la fiche et ajoute un « avis daté » : le site en tire les courbes, le tableau et la constellation.", defs: [F.items("relations", "Relations", relFields(false), { sum: sumRel, addLabel: "+ Ajouter une relation", search: true, sample: () => ({ nom: "", lien: "", groupe: "Clan de l'Ombre", rang: "", type: "PNJ", joueur: "", vivant: "oui", image: "", notes: "", phases: [{ age: parseInt(state.identite.lunes) || 0, appreciation: "neutre", description: "" }] }) })] },
+      { id: "relations", ic: "💞", label: "Relations", help: "Tous les autres chats : amis, rivaux, mentors… Pour faire évoluer un lien, ouvre la fiche et ajoute un « avis daté » : le site en tire le Marais : nénuphars, grenouilles, écureuils, brume, et le curseur des lunes.", defs: [F.items("relations", "Relations", relFields(false), { sum: sumRel, addLabel: "+ Ajouter une relation", search: true, sample: () => ({ nom: "", lien: "", groupe: "Clan de l'Ombre", rang: "", type: "PNJ", joueur: "", vivant: "oui", image: "", notes: "", phases: [{ age: parseInt(state.identite.lunes) || 0, appreciation: "neutre", description: "" }] }) })] },
     ] },
     { g: "Scènes & médias", list: [
       { id: "fils", ic: "✎", label: "Fils RP", help: "Colle le lien du fil Discord (clic droit sur le fil → « Copier le lien »). Il apparaît en bouton « Ouvrir le fil sur Discord » sur le site.", defs: [F.items("fils", "Fils RP", [
@@ -377,7 +378,7 @@
       .forEach(([id, t, n]) => { const b = el("button", "ov", `<b>${n}</b><span>${t}</span>`); b.type = "button"; b.onclick = () => { tab = id; render(); }; cards.append(b); });
     wrap.append(cards);
     const tips = el("section", "panel", `<h3>Pour bien démarrer</h3><ul class="tips">
-      <li><strong>Relations</strong> : ajoute un chat, sa photo, s'il est vivant, son clan, puis des « avis datés » : le site dessine tout seul courbes, tableau et constellation.</li>
+      <li><strong>Relations</strong> : ajoute un chat, sa photo, s'il est vivant, son clan, puis des « avis datés » : le site dessine tout seul son Marais (nénuphars, grenouilles, brume).</li>
       <li><strong>Fils RP</strong> : colle le lien du fil Discord, il devient un bouton sur le site.</li>
       <li><strong>Mise en forme</strong> : dans les textes, utilise les boutons <b>B</b> <i>I</i> ≡ … (gras, italique, surligné, murmure).</li>
       <li><strong>Enregistrer</strong> : <kbd>Ctrl</kbd> + <kbd>S</kbd>. Un brouillon est gardé automatiquement dans ce navigateur si tu fermes l'onglet.</li>

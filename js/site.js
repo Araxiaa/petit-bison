@@ -90,7 +90,7 @@
     const nFils = (D.fils || []).length;
     const portals = [
       ["#/elle/apercu", "Elle", "Caractère, goûts, physique, santé, histoire et convictions de la petite tornade de l'Ombre.", "🌿", `${SUBS_ELLE.length} rubriques`],
-      ["#/entourage/famille", "Entourage", "Sa famille et ses relations : photos, avis datés, tableau et constellation.", "🐸", `${people.length} liens`],
+      ["#/entourage/famille", "Entourage", "Sa famille et ses relations : photos, avis datés et le Marais, sa carte de brume.", "🐸", `${people.length} liens`],
       ["#/fils", "Fils RP", "Toutes ses scènes, avec le lien direct vers le fil Discord.", "💬", `${nFils} fil${nFils > 1 ? "s" : ""}`],
       ["#/galerie", "Galerie", "Illustrations et pixel-art de Petit Bison.", "🖼️", `${D.galerie.length} images`],
     ];
@@ -280,6 +280,7 @@
     let parts = (location.hash.replace(/^#\/?/, "") || "").split("/").map(decodeURIComponent);
     if (parts[0] === "personnage") parts[0] = "elle";
     if (parts[0] === "relations") parts = ["entourage", "relations", parts[1] || ""];
+    if (parts[0] === "entourage" && parts[1] === "relations" && ["tableau", "evolution", "constellation"].includes(parts[2])) parts[2] = "marais";
     const [r = "", a = "", b = ""] = parts;
     let html, after = () => {}, sub = a;
     if (r === "elle") {
@@ -293,6 +294,7 @@
     else if (r === "" || r === "accueil") { html = pageHome(); after = bindHome; }
     else { html = pageHome(); after = bindHome; }
 
+    const old = app.querySelector("#marais-host"); if (old && old._marais) old._marais.stop();
     const my = ++token;
     if (!first && !silent) { app.classList.add("leave"); await new Promise((res) => setTimeout(res, 180)); if (my !== token) return; }
     first = false;
