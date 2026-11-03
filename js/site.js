@@ -58,71 +58,83 @@
     { id: "fils", label: "Fils RP", href: "#/fils" },
     { id: "galerie", label: "Galerie", href: "#/galerie" },
   ];
+  const ICONS = { "": "🏠", elle: "🌿", entourage: "🐸", fils: "💬", galerie: "🖼️" };
   function buildNav() {
-    $("#menu").innerHTML = NAV.map((n) => `<a href="${n.href}" data-r="${n.id}">${n.label}</a>`).join("");
+    $("#menu").innerHTML = NAV.map((n) => `<a href="${n.href}" data-r="${n.id}"><span class="ti" aria-hidden="true">${ICONS[n.id]}</span>${n.label}</a>`).join("");
     $("#volet-nav").innerHTML = NAV.map((n) => `<div class="v-sec"><a class="v-main" href="${n.href}">${n.label}</a>${(n.subs || []).map((s) => `<a href="#/${n.id}/${s[0]}">${s[1]}</a>`).join("")}</div>`).join("");
   }
-  function markNav(r, sub) {
-    document.querySelectorAll("#menu a").forEach((a) => a.classList.toggle("on", a.dataset.r === r));
-    const sec = NAV.find((n) => n.id === r), bar = $("#sous");
-    if (sec && sec.subs) {
-      bar.innerHTML = sec.subs.map((s) => `<a href="#/${r}/${s[0]}" class="${s[0] === sub ? "on" : ""}">${s[1]}</a>`).join("");
-      bar.hidden = false;
-    } else bar.hidden = true;
-    document.body.classList.toggle("has-sub", !bar.hidden);
+  function markNav(r) { document.querySelectorAll("#menu a").forEach((a) => a.classList.toggle("on", a.dataset.r === r)); }
+  // Habille la feuille : trous de classeur + onglets de la rubrique
+  function dress(r, sub) {
+    const pg = app.querySelector(".page"); if (!pg) return;
+    const sec = NAV.find((n) => n.id === r);
+    if (sec && sec.subs) pg.insertAdjacentHTML("afterbegin", `<nav class="dividers" aria-label="Sous-pages">${sec.subs.map((s) => `<a href="#/${r}/${s[0]}" class="${s[0] === sub ? "on" : ""}">${s[1]}</a>`).join("")}</nav>`);
+    pg.insertAdjacentHTML("afterbegin", '<span class="holes" aria-hidden="true"></span>');
   }
 
   /* ---------- accueil ---------- */
+  // Flèche dessinée à la main (courbe + pointe) pour annoter les images
+  function arrow(x0, y0, cx, cy, x1, y1) {
+    const dx = x1 - cx, dy = y1 - cy, l = Math.hypot(dx, dy) || 1, bx = -dx / l, by = -dy / l, L = 24;
+    const rot = (a) => [bx * Math.cos(a) - by * Math.sin(a), bx * Math.sin(a) + by * Math.cos(a)];
+    const [r1x, r1y] = rot(0.5), [r2x, r2y] = rot(-0.5);
+    return `<path pathLength="1" d="M${x0} ${y0} Q${cx} ${cy} ${x1} ${y1}"/><path pathLength="1" d="M${x1 + L * r1x} ${y1 + L * r1y} L${x1} ${y1} L${x1 + L * r2x} ${y1 + L * r2y}"/>`;
+  }
+  const ann = (lines, tx, ty, a, d) => `<g class="ann" style="--d:${d}s"><text x="${tx}" y="${ty}">${lines.map((t, k) => `<tspan x="${tx}" dy="${k ? 42 : 0}">${esc(t)}</tspan>`).join("")}</text>${arrow(...a)}</g>`;
+
   function pageHome() {
     const i = D.identite, R = D.reglages || {};
     let n0 = 0;
-    const letters = i.nom.split(" ").map((w) => `<span class="w">${[...w].map((c) => `<span class="ch" style="--n:${n0++}">${esc(c)}</span>`).join("")}</span>`).join('<span class="sp"> </span>');
-    const traits = [...(D.caractere.qualites || []), ...(D.caractere.defauts || [])].map((t) => t.titre);
-    const marquee = [...traits, ...traits].map((t) => `<span>${esc(t)}</span><i></i>`).join("");
+    const letters = i.nom.split(" ").map((w) => `<span class="w">${[...w].map((c) => `<span class="ch" style="--n:${n0++}">${esc(c)}</span>`).join("")}</span>`).join("");
     const people = L.all();
     const nFils = (D.fils || []).length;
     const portals = [
-      ["#/elle/apercu", "Elle", "Caractère, goûts, physique, histoire et convictions de la petite tornade de l'Ombre.", "🌿", `${SUBS_ELLE.length} rubriques`],
+      ["#/elle/apercu", "Elle", "Caractère, goûts, physique, santé, histoire et convictions de la petite tornade de l'Ombre.", "🌿", `${SUBS_ELLE.length} rubriques`],
       ["#/entourage/famille", "Entourage", "Sa famille et ses relations : photos, avis datés, tableau et constellation.", "🐸", `${people.length} liens`],
       ["#/fils", "Fils RP", "Toutes ses scènes, avec le lien direct vers le fil Discord.", "💬", `${nFils} fil${nFils > 1 ? "s" : ""}`],
       ["#/galerie", "Galerie", "Illustrations et pixel-art de Petit Bison.", "🖼️", `${D.galerie.length} images`],
     ];
     const q = D.caractere.qualites || [], d = D.caractere.defauts || [];
     const fils = (D.fils || []).slice(0, 3);
+    const a = safeSrc(i.image) || "assets/bison-saute.webp", b = safeSrc(i.image2);
+    const svgA = `<svg viewBox="0 0 1100 760" role="img" aria-label="${esc(i.nom)} bondissant, fiche d'apparence annotée"><image class="cutout" href="${esc(a)}" x="110" y="100" width="900" height="597"/><g class="anns" aria-hidden="true">
+      ${ann(["oreilles pliées", "vers l'avant"], 10, 46, [70, 112, 56, 156, 124, 176], 0.2)}
+      ${ann(["yeux vert prairie", "le dernier vert de l'Ombre"], 205, 40, [300, 112, 300, 180, 262, 236], 0.5)}
+      ${ann(["la bosse", "du bison !"], 700, 48, [715, 118, 640, 160, 440, 272], 0.8)}
+      ${ann(["queue", "en panache"], 915, 40, [975, 106, 995, 128, 972, 160], 1.1)}
+      ${ann(["pattes pleines de boue"], 20, 742, [150, 712, 175, 700, 202, 684], 1.4)}
+      ${ann(["courte mais costaud"], 640, 742, [800, 712, 826, 700, 830, 682], 1.7)}</g></svg>`;
+    const svgB = b ? `<svg viewBox="0 0 1100 700" role="img" aria-label="${esc(i.nom)} assise"><image class="cutout" href="${esc(b)}" x="110" y="70" width="900" height="566"/><g class="anns" aria-hidden="true">
+      ${ann(["taches roux & chocolat", "= écaille de tortue"], 430, 40, [560, 110, 570, 190, 520, 318], 1.0)}
+      ${ann(["museau blanc,", "l'air espiègle"], 10, 40, [90, 108, 70, 190, 226, 246], 1.3)}</g></svg>` : "";
     return `
-    <section class="hero">
-      <div class="wrap hero-grid">
-        <div class="hero-text">
-          <span class="kicker rv">Clan de l'Ombre · ${esc(i.rang)} · ${esc(i.lunes)}</span>
-          <h1 class="big" aria-label="${esc(i.nom)}">${letters}</h1>
-          <p class="sub rv" style="--i:3">${esc(i.sous_titre)}</p>
+    <section class="poster">
+      <div class="poster-top">
+        <span class="stamp-k rv">Fiche de personnage · ${esc(i.clan)} · ${esc(i.rang)}</span>
+        <h1 class="poster-title" aria-label="${esc(i.nom)}">${letters}</h1>
+        <p class="poster-sub rv" style="--i:3">${esc(i.sous_titre)}</p>
+      </div>
+      <div class="poster-stage">
+        <figure class="pose pose-a">${svgA}<span class="sticker"><b data-count="${parseInt(i.lunes) || 0}">0</b>lunes</span></figure>
+        <aside class="poster-card rv" style="--i:2">
+          <span class="tape"></span>
           ${quote(i.citation)}
-          <div class="cta rv" style="--i:4">
-            <a class="btn primary" href="#/elle/apercu">Découvrir Petit Bison</a>
-            <a class="btn ghost" href="#/entourage/famille">Son entourage</a>
-          </div>
+          <div class="cta"><a class="btn primary" href="#/elle/apercu">Découvrir Petit Bison</a><a class="btn ghost" href="#/entourage/famille">Son entourage</a></div>
           <div class="stats">
             <div class="stat"><span>PV</span><div class="bar"><i style="--w:${Math.min(100, Number(i.pv))}%"></i></div><b data-count="${Number(i.pv) || 0}">0</b></div>
             <div class="stat pa"><span>PA</span><div class="bar"><i style="--w:${Math.min(100, Number(i.pa) * 10)}%"></i></div><b data-count="${Number(i.pa) || 0}">0</b></div>
           </div>
-        </div>
-        <figure class="portrait">
-          <div class="aura"></div><div class="blob"></div>
-          <div class="cat"><img src="${esc(safeSrc(i.image) || "assets/bison-saute.webp")}" alt="${esc(i.nom)}, chaton écaille de tortue aux yeux vert prairie" width="900" height="597" fetchpriority="high"></div>
-          <span class="sticker"><b data-count="${parseInt(i.lunes) || 0}">0</b>lunes</span>
-          <span class="spot s1"></span><span class="spot s2"></span><span class="spot s3"></span>
-        </figure>
+        </aside>
+        ${svgB ? `<figure class="pose pose-b">${svgB}</figure>` : ""}
       </div>
-      <a class="scroll-hint" href="#portals" onclick="document.getElementById('portals').scrollIntoView({behavior:'smooth'});return false">défiler ↓</a>
+      <a class="scroll-hint" href="#portals" onclick="document.getElementById('portals').scrollIntoView({behavior:'smooth'});return false">↓ feuilleter le carnet ↓</a>
     </section>
 
-    <div class="marquee" aria-hidden="true"><div class="track">${marquee}</div></div>
-
-    <section class="wrap glance">
-      <div class="gl rv"><b data-count="${parseInt(i.lunes) || 0}">0</b><span>lunes</span></div>
-      <div class="gl rv" style="--i:1"><b data-count="${(D.famille || []).length}">0</b><span>en famille</span></div>
-      <div class="gl rv" style="--i:2"><b data-count="${(D.relations || []).length}">0</b><span>relations</span></div>
-      <div class="gl rv" style="--i:3"><b data-count="${nFils}">0</b><span>fils RP</span></div>
+    <section class="wrap stamps" aria-label="Petit Bison en chiffres">
+      <div class="stamp rv"><b data-count="${parseInt(i.lunes) || 0}">0</b><span>lunes</span></div>
+      <div class="stamp rv" style="--i:1"><b data-count="${(D.famille || []).length}">0</b><span>en famille</span></div>
+      <div class="stamp rv" style="--i:2"><b data-count="${(D.relations || []).length}">0</b><span>relations</span></div>
+      <div class="stamp rv" style="--i:3"><b data-count="${nFils}">0</b><span>fils RP</span></div>
     </section>
 
     <section class="wrap traits">
@@ -132,23 +144,23 @@
           <div><h3>Ses qualités</h3><div class="chips" id="tq">${q.map((t, n) => `<button type="button" class="chip good" data-t="q${n}">${esc(t.titre)}</button>`).join("")}</div></div>
           <div><h3>Ses défauts</h3><div class="chips" id="td">${d.map((t, n) => `<button type="button" class="chip flaw" data-t="d${n}">${esc(t.titre)}</button>`).join("")}</div></div>
         </div>
-        <div class="trait-panel" id="trait-panel" aria-live="polite"><p class="muted">Touche un trait pour lire ce qu'il dit d'elle.</p></div>
+        <div class="trait-panel" id="trait-panel" aria-live="polite"><h3>Colle un autocollant…</h3><p class="muted">Touche un trait pour lire ce qu'il dit d'elle.</p></div>
       </div>
     </section>
 
     <section id="portals" class="wrap portals">
-      ${portals.map((p, n) => `<a class="portal tilt rv" style="--i:${n}" href="${p[0]}"><span class="p-ico">${p[3]}</span><h2>${p[1]}</h2><p>${p[2]}</p><em>${p[4]}</em><span class="arrow">→</span></a>`).join("")}
+      ${portals.map((p, n) => `<a class="portal rv" style="--i:${n}" href="${p[0]}"><span class="p-ico" aria-hidden="true">${p[3]}</span><h2>${p[1]}</h2><p>${p[2]}</p><em>${p[4]}</em><span class="arrow">→</span></a>`).join("")}
     </section>
 
-    <section class="wrap manifesto">
-      ${safeSrc(i.image2) ? `<img class="rv sit" src="${esc(safeSrc(i.image2))}" alt="${esc(i.nom)} assise, la queue en panache" loading="lazy" decoding="async" width="900" height="566">` : ""}
+    <section class="wrap manifesto scrap">
+      ${b ? `<img class="rv sit" src="${esc(b)}" alt="${esc(i.nom)} assise, la queue en panache" loading="lazy" decoding="async" width="900" height="566">` : ""}
       <div class="rv"><span class="kicker">${esc(R.accroche_accueil || "En quelques mots")}</span>
       <p class="big-quote">${fmt((D.caractere.description || [""])[0])}</p><a class="btn ghost" href="#/elle/caractere">Lire son caractère</a></div>
     </section>
 
     ${people.length || fils.length ? `<section class="wrap home-duo">
-      ${people.length ? `<div><span class="kicker rv">Son entourage</span><div class="faces rv">${people.slice(0, 8).map((r) => `<a href="${L.href(r)}" title="${esc(r.nom)} — ${esc(r.lien)}">${L.avatar(r, "md")}</a>`).join("")}</div><a class="more rv" href="#/entourage/famille">Voir toute la famille et les relations →</a></div>` : ""}
-      ${fils.length ? `<div><span class="kicker rv">Derniers fils RP</span><ul class="mini-fils rv">${fils.map((f) => `<li><span class="status ${/^en cours/i.test(f.statut || "") ? "live" : ""}">${esc(f.statut || "")}</span> ${O.safeLink(f.lien) ? `<a href="${esc(f.lien)}" target="_blank" rel="noopener noreferrer">${esc(f.titre)} ↗</a>` : esc(f.titre)}</li>`).join("")}</ul><a class="more rv" href="#/fils">Tous les fils →</a></div>` : ""}
+      ${people.length ? `<div class="rv"><span class="tape"></span><span class="kicker">Son entourage</span><div class="faces">${people.slice(0, 8).map((r) => `<a href="${L.href(r)}" title="${esc(r.nom)} — ${esc(r.lien)}">${L.avatar(r, "md")}</a>`).join("")}</div><a class="more" href="#/entourage/famille">Voir la famille et les relations →</a></div>` : ""}
+      ${fils.length ? `<div class="rv"><span class="tape"></span><span class="kicker">Derniers fils RP</span><ul class="mini-fils">${fils.map((f) => `<li>${O.safeLink(f.lien) ? `<a href="${esc(f.lien)}" target="_blank" rel="noopener noreferrer">${esc(f.titre)} ↗</a>` : esc(f.titre)} <span class="status ${/^en cours/i.test(f.statut || "") ? "live" : ""}">${esc(f.statut || "")}</span></li>`).join("")}</ul><a class="more" href="#/fils">Tous les fils →</a></div>` : ""}
     </section>` : ""}`;
   }
 
@@ -289,7 +301,7 @@
     if (!silent) app.classList.add("enter");
     document.body.dataset.page = r || "home";
     document.body.classList.remove("menu-open"); $("#burger").setAttribute("aria-expanded", "false");
-    markNav(r === "accueil" ? "" : r, sub); silent ? scrollTo(0, y) : scrollTo(0, 0); after(); buildToc(); FX.observe(app);
+    markNav(r === "accueil" ? "" : r); dress(r === "accueil" ? "" : r, sub); silent ? scrollTo(0, y) : scrollTo(0, 0); after(); buildToc(); FX.observe(app);
     if (!silent) setTimeout(() => app.classList.remove("enter"), 700);
     const names = { elle: "Elle", entourage: "Entourage", fils: "Fils RP", galerie: "Galerie" };
     document.title = (names[r] ? names[r] + " — " : "") + D.identite.nom;

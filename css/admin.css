@@ -1,5 +1,7 @@
-body.admin { font-size: 15px; line-height: 1.5; background: var(--bg); }
+body.admin { font-size: 15px; line-height: 1.5; background: var(--paper); }
 body.admin::before { display: none; }
+body.admin .item { background: var(--paper2); } body.admin .brand-name { font-size: 1.7rem; position: static; width: auto; height: auto; clip-path: none; }
+body.admin .btn { box-shadow: none; } body.admin .panel { background: var(--card); }
 .login { min-height: 100vh; display: grid; place-items: center; padding: 20px; background: radial-gradient(circle at 30% 20%, rgba(155, 212, 74, .18), transparent 50%), var(--bg); }
 .login-card { background: var(--paper); border: 2px solid var(--card-b); border-radius: 28px; padding: 36px 40px; max-width: 420px; text-align: center; box-shadow: var(--shadow); }
 .login-card h1 { font-size: 3.2rem; margin: 0; line-height: 1.1; }

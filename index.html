@@ -4,23 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Petit Bison — Chaton du Clan de l'Ombre</title>
-  <meta name="description" content="Petit Bison, chaton du Clan de l'Ombre : fiche, famille, relations, fils RP et galerie.">
-  <meta name="theme-color" content="#f4e9d8">
+  <meta name="description" content="Petit Bison, chaton du Clan de l'Ombre : fiche, famille, relations, carnet de santé, histoire, fils RP et galerie.">
+  <meta name="theme-color" content="#c3af9d">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Petit Bison — Chaton du Clan de l'Ombre">
   <meta property="og:description" content="Une petite tornade au grand cœur, aux yeux vert prairie.">
   <meta property="og:locale" content="fr_FR">
   <link rel="icon" href="assets/sprite-regard.png" type="image/png">
   <link rel="preload" href="assets/fonts/kaushan.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/caveat.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/nunito.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" as="image" href="assets/bison-saute.webp" fetchpriority="high">
-  <link rel="stylesheet" href="css/site.css?v=mvxzx4ti">
+  <link rel="stylesheet" href="css/site.css?v=mw18znns">
   <script>try{var t=localStorage.getItem("pb-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <filter id="rough" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency=".03" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="9" xChannelSelector="R" yChannelSelector="G"/></filter>
+  </svg>
   <a class="skip" href="#app">Aller au contenu</a>
   <div class="progress" id="progress" aria-hidden="true"></div>
-  <div class="mist" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="desk" aria-hidden="true"></div>
+  <div class="fog" aria-hidden="true"></div><div class="fog b" aria-hidden="true"></div>
   <canvas id="fx" aria-hidden="true"></canvas>
   <div class="glow" aria-hidden="true"></div>
 
@@ -37,13 +42,12 @@
     </a>
     <nav id="menu" aria-label="Navigation principale"></nav>
     <div class="tools">
-      <button class="icon-btn" id="search-btn" aria-label="Rechercher (touche /)" title="Rechercher ( / )"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.500" cy="10.500" r="6.500" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.500 15.500 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button class="icon-btn" id="search-btn" aria-label="Rechercher (touche /)" title="Rechercher ( / )"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.500" cy="10.500" r="6.500" fill="none" stroke="currentColor" stroke-width="2.200"/><path d="M15.500 15.500 21 21" stroke="currentColor" stroke-width="2.200" stroke-linecap="round"/></svg></button>
       <button class="icon-btn txt" id="fontsize" aria-label="Changer la taille du texte" title="Taille du texte">Aa</button>
       <button class="icon-btn" id="theme" aria-label="Changer d'ambiance (jour / brume)" title="Jour / Brume">☾</button>
       <button class="icon-btn burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="volet">☰</button>
     </div>
   </header>
-  <nav class="sous" id="sous" aria-label="Sous-pages" hidden></nav>
   <div class="volet" id="volet"><nav id="volet-nav" aria-label="Toutes les pages"></nav></div>
 
   <main id="app" aria-live="polite"><p class="loading">Petit Bison arrive… (en trébuchant)</p></main>
@@ -73,12 +77,12 @@
     <p class="search-help"><kbd>↑</kbd> <kbd>↓</kbd> choisir · <kbd>Entrée</kbd> ouvrir · <kbd>Échap</kbd> fermer</p>
   </dialog>
 
-  <script src="js/outils.js?v=mvxzx4ti"></script>
-  <script src="js/config.js?v=mvxzx4ti"></script>
-  <script src="js/content.js?v=mvxzx4ti"></script>
-  <script src="js/ambiance.js?v=mvxzx4ti" defer></script>
-  <script src="js/liens.js?v=mvxzx4ti" defer></script>
-  <script src="js/recits.js?v=mvxzx4ti" defer></script>
-  <script src="js/site.js?v=mvxzx4ti" defer></script>
+  <script src="js/outils.js?v=mw18znns"></script>
+  <script src="js/config.js?v=mw18znns"></script>
+  <script src="js/content.js?v=mw18znns"></script>
+  <script src="js/ambiance.js?v=mw18znns" defer></script>
+  <script src="js/liens.js?v=mw18znns" defer></script>
+  <script src="js/recits.js?v=mw18znns" defer></script>
+  <script src="js/site.js?v=mw18znns" defer></script>
 </body>
 </html>

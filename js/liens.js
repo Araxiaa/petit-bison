@@ -140,9 +140,9 @@ window.Liens = (function () {
       const l = latest(r), k = appr(l.appreciation), a = -Math.PI / 2 + (i / n) * Math.PI * 2;
       const s = (num(l.appreciation) + 3) / 6, rad = 275 - s * 150, x = cx + rad * 1.42 * Math.cos(a), y = cy + rad * Math.sin(a);
       const sz = 24 + Math.abs(num(l.appreciation)) * 3, src = O.safeSrc(r.image), c = resp(l) ? "var(--orange)" : col[k.g] || col.neutre;
-      return `<a href="${href(r)}" class="cn${dead(r) ? " is-dead" : ""}" style="--d:${(i * 0.37).toFixed(2)}s"><line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="ray"/>
+      return `<a href="${href(r)}" class="cn${dead(r) ? " is-dead" : ""}" style="--d:${(i * 0.37).toFixed(2)}s"><path d="M${cx} ${cy} Q${((cx + x) / 2).toFixed(1)} ${((cy + y) / 2 + 22).toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" class="ray"/>
         <g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g class="bob"><circle r="${sz + 4}" fill="none" stroke="${c}" stroke-width="3" ${dead(r) ? 'stroke-dasharray="4 4"' : ""} class="ring"/>
-        <clipPath id="cp${i}"><circle r="${sz}"/></clipPath>
+        <circle class="pin" cy="${-sz - 9}" r="6"/><clipPath id="cp${i}"><circle r="${sz}"/></clipPath>
         ${src ? `<image href="${esc(src)}" x="${-sz}" y="${-sz}" width="${sz * 2}" height="${sz * 2}" clip-path="url(#cp${i})" preserveAspectRatio="xMidYMid slice"/>` : `<circle r="${sz}" fill="hsl(${O.hue(r.nom)} 38% 58%)"/><text class="mono" y="6" text-anchor="middle">${esc(O.initials(r.nom))}</text>`}
         <text class="nm" y="${sz + 22}" text-anchor="middle">${esc(r.nom)}</text><title>${esc(r.nom)} — ${esc(r.lien)} · ${esc(k.label)}${dead(r) ? " · décédé·e" : ""}</title></g></g></a>`;
     }).join("");
